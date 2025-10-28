@@ -11,6 +11,7 @@ import {
   receipts,
   receiptLinks,
   employees,
+  gmailAccounts,
   type Project, 
   type InsertProject,
   type Timesheet,
@@ -33,6 +34,8 @@ import {
   type InsertReceiptLink,
   type Employee,
   type InsertEmployee,
+  type GmailAccount,
+  type InsertGmailAccount,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -88,6 +91,15 @@ export interface IStorage {
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   updateEmployee(id: string, employee: Partial<InsertEmployee>): Promise<Employee>;
   deleteEmployee(id: string): Promise<void>;
+
+  // Gmail Accounts
+  getAllGmailAccounts(): Promise<GmailAccount[]>;
+  getActiveGmailAccounts(): Promise<GmailAccount[]>;
+  getGmailAccountByEmployee(employeeId: string): Promise<GmailAccount | undefined>;
+  getGmailAccount(id: string): Promise<GmailAccount | undefined>;
+  createGmailAccount(account: InsertGmailAccount): Promise<GmailAccount>;
+  updateGmailAccount(id: string, account: Partial<InsertGmailAccount>): Promise<GmailAccount>;
+  deleteGmailAccount(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -374,6 +386,72 @@ export class DatabaseStorage implements IStorage {
       .update(employees)
       .set({ isActive: false })
       .where(eq(employees.id, id));
+  }
+
+  // Gmail Accounts
+  async getAllGmailAccounts(): Promise<GmailAccount[]> {
+    return await db
+      .select()
+      .from(gmailAccounts)
+      .orderBy(desc(gmailAccounts.createdAt));
+  }
+
+  async getActiveGmailAccounts(): Promise<GmailAccount[]> {
+    return await db
+      .select()
+      .from(gmailAccounts)
+      .where(eq(gmailAccounts.isActive, true))
+      .orderBy(desc(gmailAccounts.createdAt));
+  }
+
+  async getGmailAccountByEmployee(employeeId: string): Promise<GmailAccount | undefined> {
+    const [account] = await db
+      .select()
+      .from(gmailAccounts)
+      .where(and(
+        eq(gmailAccounts.employeeId, employeeId),
+        eq(gmailAccounts.isActive, true)
+      ));
+    return account || undefined;
+  }
+
+  async getGmailAccount(id: string): Promise<GmailAccount | undefined> {
+    const [account] = await db
+      .select()
+      .from(gmailAccounts)
+      .where(eq(gmailAccounts.id, id));
+    return account || undefined;
+  }
+
+  async createGmailAccount(insertAccount: InsertGmailAccount): Promise<GmailAccount> {
+    const [account] = await db
+      .insert(gmailAccounts)
+      .values(insertAccount)
+      .returning();
+    return account;
+  }
+
+  async updateGmailAccount(id: string, updateData: Partial<InsertGmailAccount>): Promise<GmailAccount> {
+    const [account] = await db
+      .update(gmailAccounts)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(eq(gmailAccounts.id, id))
+      .returning();
+    return account;
+  }
+
+  async deleteGmailAccount(id: string): Promise<void> {
+    // Soft delete - just mark as inactive
+    await db
+      .update(gmailAccounts)
+      .set({ 
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(gmailAccounts.id, id));
   }
 }
 
