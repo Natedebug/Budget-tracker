@@ -17,6 +17,7 @@ import { type Project } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
+import { useState } from "react";
 
 interface AppSidebarProps {
   selectedProjectId: string | null;
@@ -63,10 +64,16 @@ const menuItems = [
 
 export function AppSidebar({ selectedProjectId, onProjectChange }: AppSidebarProps) {
   const [location] = useLocation();
+  const [selectOpen, setSelectOpen] = useState(false);
   
   const { data: projects } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
   });
+
+  const handleProjectSelect = (value: string) => {
+    onProjectChange(value);
+    setSelectOpen(false);
+  };
 
   const handleExport = async () => {
     if (!selectedProjectId) return;
@@ -106,7 +113,12 @@ export function AppSidebar({ selectedProjectId, onProjectChange }: AppSidebarPro
         <SidebarGroup>
           <SidebarGroupLabel>Active Project</SidebarGroupLabel>
           <SidebarGroupContent className="px-2">
-            <Select value={selectedProjectId || ""} onValueChange={onProjectChange}>
+            <Select 
+              value={selectedProjectId || ""} 
+              onValueChange={handleProjectSelect}
+              open={selectOpen}
+              onOpenChange={setSelectOpen}
+            >
               <SelectTrigger data-testid="select-project">
                 <SelectValue placeholder="Select project..." />
               </SelectTrigger>
