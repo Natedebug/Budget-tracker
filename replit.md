@@ -6,6 +6,18 @@ BudgetSync Field is a construction project budget tracking application designed 
 
 The application is built as a full-stack web application with a React-based frontend and an Express backend, featuring offline capability considerations and a mobile-first, field-ready design approach.
 
+## Recent Changes
+
+**October 28, 2025**: 
+- ✅ **Replit Auth Integration**: Added complete authentication system
+  - Implemented OIDC authentication with multiple login providers (Google, GitHub, email/password)
+  - Added PostgreSQL-backed session management
+  - Created users and sessions database tables
+  - Protected all API routes with authentication middleware
+  - Built construction-themed landing page for unauthenticated users
+  - Added user profile display with avatar and logout functionality
+  - End-to-end authentication testing completed successfully
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -70,7 +82,34 @@ All tables use UUID primary keys and include created timestamps. Foreign keys en
 
 ### Authentication and Authorization
 
-Currently not implemented. The application assumes single-user or trusted environment usage. Future implementation would require session management and user authentication middleware.
+**Authentication Provider**: Replit Auth (OpenID Connect) with support for multiple login methods:
+- Google OAuth
+- GitHub OAuth
+- Email/password
+- Other OIDC providers
+
+**Session Management**: PostgreSQL-backed sessions using `connect-pg-simple` with 1-week TTL. Sessions stored in `sessions` table with automatic cleanup.
+
+**User Management**: Users stored in `users` table with profile information (email, name, profile image) synced from OIDC claims. Users automatically created/updated on login via upsert operation.
+
+**Frontend Auth Flow**:
+- Unauthenticated users see landing page with login button
+- Login redirects to `/api/login` → OIDC flow → callback → authenticated dashboard
+- `useAuth()` hook provides user state, loading status, and authentication status
+- 401 responses treated as "not authenticated" (not errors)
+- User profile displayed in header with avatar, name, and logout button
+
+**Backend Protection**:
+- All API routes protected with `isAuthenticated` middleware
+- Protected routes: `/api/projects`, `/api/timesheets`, `/api/progress-reports`, `/api/equipment`, `/api/subcontractors`, `/api/overhead`, `/api/materials`
+- Unauthenticated requests return 401 Unauthorized
+- Session refresh handled automatically via OIDC token refresh
+
+**Security Features**:
+- CSRF protection via session cookies
+- Secure session cookies (httpOnly, sameSite)
+- Token refresh for long-running sessions
+- No client-side secret storage
 
 ### Key Architectural Decisions
 
