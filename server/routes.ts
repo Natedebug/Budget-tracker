@@ -12,6 +12,7 @@ import {
   insertMaterialSchema,
   insertReceiptSchema,
   insertReceiptLinkSchema,
+  insertEmployeeSchema,
 } from "@shared/schema";
 import multer from "multer";
 import path from "path";
@@ -522,6 +523,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete receipt" });
+    }
+  });
+
+  // Employees
+  app.get("/api/employees", isAuthenticated, async (req, res) => {
+    try {
+      const employees = await storage.getAllEmployees();
+      res.json(employees);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employees" });
+    }
+  });
+
+  app.get("/api/employees/active", isAuthenticated, async (req, res) => {
+    try {
+      const employees = await storage.getActiveEmployees();
+      res.json(employees);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch active employees" });
+    }
+  });
+
+  app.get("/api/employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const employee = await storage.getEmployee(req.params.id);
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+      res.json(employee);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employee" });
+    }
+  });
+
+  app.post("/api/employees", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertEmployeeSchema.parse(req.body);
+      const employee = await storage.createEmployee(data);
+      res.status(201).json(employee);
+    } catch (error) {
+      console.error('Employee creation error:', error);
+      res.status(400).json({ error: "Invalid employee data" });
+    }
+  });
+
+  app.patch("/api/employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const employee = await storage.updateEmployee(req.params.id, req.body);
+      res.json(employee);
+    } catch (error) {
+      console.error('Employee update error:', error);
+      res.status(400).json({ error: "Failed to update employee" });
+    }
+  });
+
+  app.delete("/api/employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteEmployee(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete employee" });
     }
   });
 
