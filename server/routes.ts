@@ -10,7 +10,41 @@ import {
   insertSubcontractorEntrySchema,
   insertOverheadEntrySchema,
   insertMaterialSchema,
+  insertReceiptSchema,
+  insertReceiptLinkSchema,
 } from "@shared/schema";
+import multer from "multer";
+import path from "path";
+import { randomUUID } from "crypto";
+import { analyzeReceipt } from "./services/receiptAnalyzer";
+
+// Configure multer for file uploads
+const multerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/receipts/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueFilename = `${randomUUID()}${path.extname(file.originalname)}`;
+    cb(null, uniqueFilename);
+  },
+});
+
+const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPG, PNG, and PDF files are allowed.'));
+  }
+};
+
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Replit Auth - Setup authentication
@@ -360,6 +394,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Material validation error:', error);
       res.status(400).json({ error: "Invalid material data", details: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Receipts
+  app.post("/api/receipts", isAuthenticated, upload.single('receipt'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const { projectId } = req.body;
+      if (!projectId) {
+        return res.status(400).json({ error: "Project ID is required" });
+      }
+
+      const receiptData = {
+        projectId,
+        storagePath: req.file.path,
+        originalFilename: req.file.originalname,
+        mimeType: req.file.mimetype,
+        fileSize: req.file.size,
+        status: 'uploaded',
+      };
+
+      const receipt = await storage.createReceipt(receiptData);
+      res.status(201).json(receipt);
+    } catch (error) {
+      console.error('Receipt upload error:', error);
+      res.status(400).json({ error: "Failed to upload receipt" });
+    }
+  });
+
+  app.post("/api/receipts/:id/analyze", isAuthenticated, async (req, res) => {
+    try {
+      const receiptId = req.params.id;
+      const receipt = await storage.getReceiptById(receiptId);
+
+      if (!receipt) {
+        return res.status(404).json({ error: "Receipt not found" });
+      }
+
+      if (receipt.status === 'analyzed') {
+        return res.json(receipt);
+      }
+
+      const analysisData = await analyzeReceipt(receipt.storagePath);
+      const updatedReceipt = await storage.updateReceiptAnalysis(receiptId, analysisData);
+      
+      res.json(updatedReceipt);
+    } catch (error) {
+      console.error('Receipt analysis error:', error);
+      
+      const receiptId = req.params.id;
+      const receipt = await storage.getReceiptById(receiptId);
+      if (receipt) {
+        await storage.updateReceiptAnalysis(receiptId, { error: error instanceof Error ? error.message : 'Analysis failed' });
+      }
+      
+      res.status(500).json({ error: "Failed to analyze receipt" });
+    }
+  });
+
+  app.post("/api/receipts/:id/link", isAuthenticated, async (req, res) => {
+    try {
+      const { entryType, entryId } = req.body;
+      
+      if (!entryType || !entryId) {
+        return res.status(400).json({ error: "Entry type and entry ID are required" });
+      }
+
+      const validEntryTypes = ['material', 'equipment', 'subcontractor', 'overhead'];
+      if (!validEntryTypes.includes(entryType)) {
+        return res.status(400).json({ error: "Invalid entry type" });
+      }
+
+      const linkData = {
+        receiptId: req.params.id,
+        entryType,
+        entryId,
+      };
+
+      const link = await storage.createReceiptLink(linkData);
+      res.status(201).json(link);
+    } catch (error) {
+      console.error('Receipt link creation error:', error);
+      res.status(400).json({ error: "Failed to create receipt link" });
+    }
+  });
+
+  app.get("/api/projects/:projectId/receipts", isAuthenticated, async (req, res) => {
+    try {
+      const receipts = await storage.getProjectReceipts(req.params.projectId);
+      res.json(receipts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch receipts" });
+    }
+  });
+
+  app.get("/api/receipts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const receipt = await storage.getReceiptById(req.params.id);
+      if (!receipt) {
+        return res.status(404).json({ error: "Receipt not found" });
+      }
+      res.json(receipt);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch receipt" });
+    }
+  });
+
+  app.delete("/api/receipts/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteReceipt(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete receipt" });
     }
   });
 

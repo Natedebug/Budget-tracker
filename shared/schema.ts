@@ -111,6 +111,28 @@ export const overheadEntries = pgTable("overhead_entries", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Receipts table
+export const receipts = pgTable("receipts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  storagePath: text("storage_path").notNull(),
+  originalFilename: text("original_filename").notNull(),
+  mimeType: text("mime_type").notNull(),
+  fileSize: integer("file_size").notNull(),
+  status: text("status").notNull().default("uploaded"), // uploaded, processing, analyzed, failed
+  analysisData: jsonb("analysis_data"), // Structured receipt data from AI
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+});
+
+// Receipt links table (polymorphic join)
+export const receiptLinks = pgTable("receipt_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  receiptId: varchar("receipt_id").notNull().references(() => receipts.id, { onDelete: "cascade" }),
+  entryType: text("entry_type").notNull(), // material, equipment, subcontractor, overhead
+  entryId: varchar("entry_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const projectsRelations = relations(projects, ({ many }) => ({
   timesheets: many(timesheets),
@@ -118,6 +140,7 @@ export const projectsRelations = relations(projects, ({ many }) => ({
   equipmentLogs: many(equipmentLogs),
   subcontractorEntries: many(subcontractorEntries),
   overheadEntries: many(overheadEntries),
+  receipts: many(receipts),
 }));
 
 export const timesheetsRelations = relations(timesheets, ({ one }) => ({
@@ -160,6 +183,21 @@ export const overheadEntriesRelations = relations(overheadEntries, ({ one }) => 
   project: one(projects, {
     fields: [overheadEntries.projectId],
     references: [projects.id],
+  }),
+}));
+
+export const receiptsRelations = relations(receipts, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [receipts.projectId],
+    references: [projects.id],
+  }),
+  links: many(receiptLinks),
+}));
+
+export const receiptLinksRelations = relations(receiptLinks, ({ one }) => ({
+  receipt: one(receipts, {
+    fields: [receiptLinks.receiptId],
+    references: [receipts.id],
   }),
 }));
 
@@ -221,6 +259,18 @@ export const insertOverheadEntrySchema = createInsertSchema(overheadEntries, {
   createdAt: true,
 });
 
+export const insertReceiptSchema = createInsertSchema(receipts, {
+  fileSize: z.number().int().positive(),
+}).omit({
+  id: true,
+  uploadedAt: true,
+});
+
+export const insertReceiptLinkSchema = createInsertSchema(receiptLinks).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
@@ -242,6 +292,12 @@ export type InsertSubcontractorEntry = z.infer<typeof insertSubcontractorEntrySc
 
 export type OverheadEntry = typeof overheadEntries.$inferSelect;
 export type InsertOverheadEntry = z.infer<typeof insertOverheadEntrySchema>;
+
+export type Receipt = typeof receipts.$inferSelect;
+export type InsertReceipt = z.infer<typeof insertReceiptSchema>;
+
+export type ReceiptLink = typeof receiptLinks.$inferSelect;
+export type InsertReceiptLink = z.infer<typeof insertReceiptLinkSchema>;
 
 // Replit Auth - User types
 export type UpsertUser = typeof users.$inferInsert;

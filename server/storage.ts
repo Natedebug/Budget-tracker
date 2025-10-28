@@ -8,6 +8,8 @@ import {
   overheadEntries,
   materials,
   users,
+  receipts,
+  receiptLinks,
   type Project, 
   type InsertProject,
   type Timesheet,
@@ -24,6 +26,10 @@ import {
   type InsertMaterial,
   type User,
   type UpsertUser,
+  type Receipt,
+  type InsertReceipt,
+  type ReceiptLink,
+  type InsertReceiptLink,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -63,6 +69,14 @@ export interface IStorage {
   getProgressReportMaterials(reportId: string): Promise<Material[]>;
   getProjectMaterials(projectId: string): Promise<Material[]>;
   createMaterial(material: InsertMaterial): Promise<Material>;
+
+  // Receipts
+  createReceipt(receipt: InsertReceipt): Promise<Receipt>;
+  updateReceiptAnalysis(id: string, analysisData: any): Promise<Receipt>;
+  createReceiptLink(link: InsertReceiptLink): Promise<ReceiptLink>;
+  getProjectReceipts(projectId: string): Promise<Receipt[]>;
+  getReceiptById(id: string): Promise<Receipt | undefined>;
+  deleteReceipt(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -251,6 +265,55 @@ export class DatabaseStorage implements IStorage {
       .values(insertMaterial)
       .returning();
     return material;
+  }
+
+  // Receipts
+  async createReceipt(insertReceipt: InsertReceipt): Promise<Receipt> {
+    const [receipt] = await db
+      .insert(receipts)
+      .values(insertReceipt)
+      .returning();
+    return receipt;
+  }
+
+  async updateReceiptAnalysis(id: string, analysisData: any): Promise<Receipt> {
+    const [receipt] = await db
+      .update(receipts)
+      .set({
+        status: 'analyzed',
+        analysisData: analysisData,
+      })
+      .where(eq(receipts.id, id))
+      .returning();
+    return receipt;
+  }
+
+  async createReceiptLink(insertLink: InsertReceiptLink): Promise<ReceiptLink> {
+    const [link] = await db
+      .insert(receiptLinks)
+      .values(insertLink)
+      .returning();
+    return link;
+  }
+
+  async getProjectReceipts(projectId: string): Promise<Receipt[]> {
+    return await db
+      .select()
+      .from(receipts)
+      .where(eq(receipts.projectId, projectId))
+      .orderBy(desc(receipts.uploadedAt));
+  }
+
+  async getReceiptById(id: string): Promise<Receipt | undefined> {
+    const [receipt] = await db
+      .select()
+      .from(receipts)
+      .where(eq(receipts.id, id));
+    return receipt || undefined;
+  }
+
+  async deleteReceipt(id: string): Promise<void> {
+    await db.delete(receipts).where(eq(receipts.id, id));
   }
 }
 
