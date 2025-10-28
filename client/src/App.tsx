@@ -17,6 +17,7 @@ import Subcontractors from "@/pages/subcontractors";
 import Overhead from "@/pages/overhead";
 import Projects from "@/pages/projects";
 import Employees from "@/pages/employees";
+import GmailAccounts from "@/pages/gmail-accounts";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 import { useState, useEffect } from "react";
@@ -33,6 +34,7 @@ function Router({ projectId, onProjectSelect }: { projectId: string | null; onPr
       <Route path="/overhead" component={() => <Overhead projectId={projectId} />} />
       <Route path="/projects" component={() => <Projects onProjectSelect={onProjectSelect} />} />
       <Route path="/employees" component={Employees} />
+      <Route path="/gmail-accounts" component={() => <GmailAccounts projectId={projectId} />} />
       <Route component={NotFound} />
     </Switch>
   );

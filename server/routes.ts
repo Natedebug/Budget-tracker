@@ -19,6 +19,7 @@ import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
 import { analyzeReceipt } from "./services/receiptAnalyzer";
+import { scanGmailAccountForReceipts } from "./services/receiptScanner";
 
 // Configure multer for file uploads
 const multerStorage = multer.diskStorage({
@@ -666,14 +667,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Gmail account not found" });
       }
       
-      // TODO: Implement actual sync logic with Gmail service
-      // For now, just update the sync status
-      await storage.updateGmailAccount(req.params.id, {
-        syncStatus: "pending",
-        lastError: null,
-      });
+      // Get the project ID from the request body or use a default
+      const projectId = req.body.projectId;
+      if (!projectId) {
+        return res.status(400).json({ error: "Project ID is required" });
+      }
       
-      res.json({ message: "Sync initiated" });
+      // Start the scan asynchronously
+      // Don't wait for it to complete to avoid timeout
+      scanGmailAccountForReceipts(req.params.id, projectId)
+        .then((result) => {
+          console.log('Gmail scan completed:', result);
+        })
+        .catch((error) => {
+          console.error('Gmail scan failed:', error);
+        });
+      
+      res.json({ 
+        message: "Sync initiated", 
+        status: "Scanning emails in the background..." 
+      });
     } catch (error) {
       console.error('Gmail sync error:', error);
       res.status(500).json({ error: "Failed to initiate sync" });
