@@ -98,8 +98,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return sum + parseFloat(entry.cost);
       }, 0);
 
-      // Materials are tracked in progress reports - for MVP we'll set to 0
-      const materialsSpent = 0;
+      // Calculate materials costs from all progress reports
+      const allMaterials = await storage.getProjectMaterials(projectId);
+      const materialsSpent = allMaterials.reduce((sum, material) => {
+        return sum + parseFloat(material.cost);
+      }, 0);
 
       const totalSpent = laborSpent + equipmentSpent + subcontractorsSpent + overheadSpent + materialsSpent;
       const totalBudget = parseFloat(project.totalBudget);

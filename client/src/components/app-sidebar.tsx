@@ -1,4 +1,4 @@
-import { LayoutDashboard, Clock, TrendingUp, Truck, FolderKanban, Download } from "lucide-react";
+import { LayoutDashboard, Clock, TrendingUp, Truck, Users, Briefcase, FolderKanban, Download } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -43,6 +43,16 @@ const menuItems = [
     title: "Equipment",
     url: "/equipment",
     icon: Truck,
+  },
+  {
+    title: "Subcontractors",
+    url: "/subcontractors",
+    icon: Users,
+  },
+  {
+    title: "Overhead",
+    url: "/overhead",
+    icon: Briefcase,
   },
   {
     title: "Projects",

@@ -13,6 +13,8 @@ import Dashboard from "@/pages/dashboard";
 import Timesheets from "@/pages/timesheets";
 import ProgressReports from "@/pages/progress-reports";
 import Equipment from "@/pages/equipment";
+import Subcontractors from "@/pages/subcontractors";
+import Overhead from "@/pages/overhead";
 import Projects from "@/pages/projects";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
@@ -26,6 +28,8 @@ function Router({ projectId, onProjectSelect }: { projectId: string | null; onPr
       <Route path="/timesheets" component={() => <Timesheets projectId={projectId} />} />
       <Route path="/progress" component={() => <ProgressReports projectId={projectId} />} />
       <Route path="/equipment" component={() => <Equipment projectId={projectId} />} />
+      <Route path="/subcontractors" component={() => <Subcontractors projectId={projectId} />} />
+      <Route path="/overhead" component={() => <Overhead projectId={projectId} />} />
       <Route path="/projects" component={() => <Projects onProjectSelect={onProjectSelect} />} />
       <Route component={NotFound} />
     </Switch>

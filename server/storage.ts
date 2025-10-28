@@ -26,7 +26,7 @@ import {
   type UpsertUser,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (IMPORTANT - mandatory for Replit Auth)
@@ -60,6 +60,7 @@ export interface IStorage {
 
   // Materials
   getProgressReportMaterials(reportId: string): Promise<Material[]>;
+  getProjectMaterials(projectId: string): Promise<Material[]>;
   createMaterial(material: InsertMaterial): Promise<Material>;
 }
 
@@ -194,6 +195,28 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(materials)
       .where(eq(materials.progressReportId, reportId));
+  }
+
+  async getProjectMaterials(projectId: string): Promise<Material[]> {
+    // Get all materials from all progress reports for this project
+    const projectReports = await db
+      .select()
+      .from(progressReports)
+      .where(eq(progressReports.projectId, projectId));
+    
+    if (projectReports.length === 0) {
+      return [];
+    }
+
+    const reportIds = projectReports.map(r => r.id);
+    const allMaterials = await db
+      .select()
+      .from(materials)
+      .where(
+        sql`${materials.progressReportId} IN (${sql.join(reportIds.map(id => sql`${id}`), sql`, `)})`
+      );
+    
+    return allMaterials;
   }
 
   async createMaterial(insertMaterial: InsertMaterial): Promise<Material> {
