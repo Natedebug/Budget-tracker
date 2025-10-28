@@ -38,6 +38,18 @@ The application is built as a full-stack web application with a React-based fron
   - Image preview and serving with ReceiptPreview component
   - Field mapping standardized between backend analyzer and frontend (price/total/unit/quantity)
 
+- ✅ **Employee Management System**: Implemented complete employee tracking with pay rate management
+  - Created employees database table with fields for name, email, pay rate, company card access, and active status
+  - Built full CRUD API endpoints (GET all/active, POST create, PATCH update, DELETE soft-delete)
+  - Implemented employee management UI with add/edit/delete functionality via dialog forms
+  - Employee cards display name, email, hourly pay rate, and company credit card status
+  - Soft delete functionality maintains historical data while removing from active lists
+  - Integrated employee dropdown in timesheet form with intelligent auto-fill
+  - Selecting employee from dropdown auto-fills their default pay rate
+  - Pay rate remains editable for manual overrides (overtime, special rates)
+  - Robust error handling with NaN guards and loading states
+  - Foundation laid for future integrations: Gmail (email receipt imports) and Plaid (credit card transactions)
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
