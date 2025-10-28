@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   insertProjectSchema, 
   insertTimesheetSchema, 
@@ -12,8 +13,23 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Projects
-  app.get("/api/projects", async (req, res) => {
+  // Replit Auth - Setup authentication
+  await setupAuth(app);
+
+  // Replit Auth - User endpoint
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Projects (protected routes)
+  app.get("/api/projects", isAuthenticated, async (req, res) => {
     try {
       const projects = await storage.getAllProjects();
       res.json(projects);
@@ -22,7 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/projects/:id", async (req, res) => {
+  app.get("/api/projects/:id", isAuthenticated, async (req, res) => {
     try {
       const project = await storage.getProject(req.params.id);
       if (!project) {
@@ -34,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects", async (req, res) => {
+  app.post("/api/projects", isAuthenticated, async (req, res) => {
     try {
       const data = insertProjectSchema.parse(req.body);
       const project = await storage.createProject(data);
@@ -45,7 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Budget statistics for a project
-  app.get("/api/projects/:id/stats", async (req, res) => {
+  app.get("/api/projects/:id/stats", isAuthenticated, async (req, res) => {
     try {
       const projectId = req.params.id;
       const project = await storage.getProject(projectId);
@@ -146,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Export
-  app.get("/api/projects/:id/export", async (req, res) => {
+  app.get("/api/projects/:id/export", isAuthenticated, async (req, res) => {
     try {
       const projectId = req.params.id;
       const project = await storage.getProject(projectId);
@@ -205,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Timesheets
-  app.get("/api/projects/:id/timesheets", async (req, res) => {
+  app.get("/api/projects/:id/timesheets", isAuthenticated, async (req, res) => {
     try {
       const timesheets = await storage.getProjectTimesheets(req.params.id);
       res.json(timesheets);
@@ -214,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/timesheets", async (req, res) => {
+  app.post("/api/timesheets", isAuthenticated, async (req, res) => {
     try {
       const data = insertTimesheetSchema.parse(req.body);
       const timesheet = await storage.createTimesheet(data);
@@ -225,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Progress Reports
-  app.get("/api/projects/:id/progress-reports", async (req, res) => {
+  app.get("/api/projects/:id/progress-reports", isAuthenticated, async (req, res) => {
     try {
       const reports = await storage.getProjectProgressReports(req.params.id);
       res.json(reports);
@@ -234,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/progress-reports", async (req, res) => {
+  app.post("/api/progress-reports", isAuthenticated, async (req, res) => {
     try {
       const data = insertProgressReportSchema.parse(req.body);
       const report = await storage.createProgressReport(data);
@@ -245,7 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Equipment Logs
-  app.get("/api/projects/:id/equipment", async (req, res) => {
+  app.get("/api/projects/:id/equipment", isAuthenticated, async (req, res) => {
     try {
       const logs = await storage.getProjectEquipmentLogs(req.params.id);
       res.json(logs);
@@ -254,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/equipment", async (req, res) => {
+  app.post("/api/equipment", isAuthenticated, async (req, res) => {
     try {
       const data = insertEquipmentLogSchema.parse(req.body);
       const log = await storage.createEquipmentLog(data);
@@ -265,7 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Subcontractor Entries
-  app.get("/api/projects/:id/subcontractors", async (req, res) => {
+  app.get("/api/projects/:id/subcontractors", isAuthenticated, async (req, res) => {
     try {
       const entries = await storage.getProjectSubcontractorEntries(req.params.id);
       res.json(entries);
@@ -274,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/subcontractors", async (req, res) => {
+  app.post("/api/subcontractors", isAuthenticated, async (req, res) => {
     try {
       const data = insertSubcontractorEntrySchema.parse(req.body);
       const entry = await storage.createSubcontractorEntry(data);
@@ -285,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Overhead Entries
-  app.get("/api/projects/:id/overhead", async (req, res) => {
+  app.get("/api/projects/:id/overhead", isAuthenticated, async (req, res) => {
     try {
       const entries = await storage.getProjectOverheadEntries(req.params.id);
       res.json(entries);
@@ -294,7 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/overhead", async (req, res) => {
+  app.post("/api/overhead", isAuthenticated, async (req, res) => {
     try {
       const data = insertOverheadEntrySchema.parse(req.body);
       const entry = await storage.createOverheadEntry(data);
@@ -305,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Materials
-  app.get("/api/progress-reports/:id/materials", async (req, res) => {
+  app.get("/api/progress-reports/:id/materials", isAuthenticated, async (req, res) => {
     try {
       const materials = await storage.getProgressReportMaterials(req.params.id);
       res.json(materials);
@@ -314,7 +330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/materials", async (req, res) => {
+  app.post("/api/materials", isAuthenticated, async (req, res) => {
     try {
       const data = insertMaterialSchema.parse(req.body);
       const material = await storage.createMaterial(data);

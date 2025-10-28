@@ -7,6 +7,7 @@ import {
   subcontractorEntries,
   overheadEntries,
   materials,
+  users,
   type Project, 
   type InsertProject,
   type Timesheet,
@@ -21,11 +22,17 @@ import {
   type InsertOverheadEntry,
   type Material,
   type InsertMaterial,
+  type User,
+  type UpsertUser,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations (IMPORTANT - mandatory for Replit Auth)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+
   // Projects
   getAllProjects(): Promise<Project[]>;
   getProject(id: string): Promise<Project | undefined>;
@@ -57,6 +64,27 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User operations (IMPORTANT - mandatory for Replit Auth)
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
   // Projects
   async getAllProjects(): Promise<Project[]> {
     return await db.select().from(projects).orderBy(desc(projects.createdAt));
