@@ -48,7 +48,17 @@ The application is built as a full-stack web application with a React-based fron
   - Selecting employee from dropdown auto-fills their default pay rate
   - Pay rate remains editable for manual overrides (overtime, special rates)
   - Robust error handling with NaN guards and loading states
-  - Foundation laid for future integrations: Gmail (email receipt imports) and Plaid (credit card transactions)
+
+- ✅ **Gmail Integration - Single Company Inbox Architecture**: Refactored from multi-account to single-connection model
+  - **Architecture Decision**: Single company Gmail inbox (e.g., receipts@company.com) where employees forward receipts
+  - Created `gmail_connection` table replacing `gmail_accounts` table (database schema migrated)
+  - Removed `employeeId` foreign key - one connection per company, not per employee
+  - Simplified API endpoints: GET/POST/DELETE `/api/gmail-connection`, POST `/api/gmail-connection/sync`
+  - Updated Gmail service and receipt scanner for single-connection workflow
+  - Receipt scanner processes all emails in company inbox, optionally matches sender to employee emails
+  - Built simplified frontend UI (`gmail-connection.tsx`) with connect/disconnect/sync controls
+  - Single OAuth token limitation of Replit Gmail connector properly addressed
+  - Cleaner architecture: employees forward to shared inbox → automatic import → optional employee matching
 
 ## User Preferences
 

@@ -39,12 +39,13 @@ export const employees = pgTable("employees", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Gmail accounts table - tracks linked Gmail accounts for receipt auto-import
-export const gmailAccounts = pgTable("gmail_accounts", {
+// Gmail connection table - tracks the company Gmail inbox for receipt auto-import
+// Note: Only ONE connection is supported due to Replit Gmail connector limitations
+export const gmailConnection = pgTable("gmail_connection", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  gmailEmail: varchar("gmail_email").notNull(),
+  gmailEmail: varchar("gmail_email").notNull(), // The company inbox email
+  description: text("description"), // e.g., "Company receipts inbox"
   isActive: boolean("is_active").notNull().default(true),
   lastSyncAt: timestamp("last_sync_at"),
   syncStatus: text("sync_status").default("pending"), // pending, syncing, success, error
@@ -228,16 +229,11 @@ export const receiptLinksRelations = relations(receiptLinks, ({ one }) => ({
 
 export const employeesRelations = relations(employees, ({ many }) => ({
   timesheets: many(timesheets),
-  gmailAccounts: many(gmailAccounts),
 }));
 
-export const gmailAccountsRelations = relations(gmailAccounts, ({ one }) => ({
-  employee: one(employees, {
-    fields: [gmailAccounts.employeeId],
-    references: [employees.id],
-  }),
+export const gmailConnectionRelations = relations(gmailConnection, ({ one }) => ({
   user: one(users, {
-    fields: [gmailAccounts.userId],
+    fields: [gmailConnection.userId],
     references: [users.id],
   }),
 }));
@@ -319,7 +315,7 @@ export const insertEmployeeSchema = createInsertSchema(employees, {
   createdAt: true,
 });
 
-export const insertGmailAccountSchema = createInsertSchema(gmailAccounts).omit({
+export const insertGmailConnectionSchema = createInsertSchema(gmailConnection).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -356,8 +352,8 @@ export type InsertReceiptLink = z.infer<typeof insertReceiptLinkSchema>;
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 
-export type GmailAccount = typeof gmailAccounts.$inferSelect;
-export type InsertGmailAccount = z.infer<typeof insertGmailAccountSchema>;
+export type GmailConnection = typeof gmailConnection.$inferSelect;
+export type InsertGmailConnection = z.infer<typeof insertGmailConnectionSchema>;
 
 // Replit Auth - User types
 export type UpsertUser = typeof users.$inferInsert;

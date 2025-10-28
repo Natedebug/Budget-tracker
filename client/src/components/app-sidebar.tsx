@@ -61,8 +61,8 @@ const menuItems = [
     icon: UserCog,
   },
   {
-    title: "Gmail Accounts",
-    url: "/gmail-accounts",
+    title: "Gmail Connection",
+    url: "/gmail-connection",
     icon: Mail,
   },
   {

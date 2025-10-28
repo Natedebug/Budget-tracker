@@ -15,10 +15,10 @@ export interface ScanResult {
 }
 
 /**
- * Scan emails for a Gmail account and process receipt attachments
+ * Scan emails from the company Gmail inbox and process receipt attachments
  */
 export async function scanGmailAccountForReceipts(
-  gmailAccountId: string,
+  connectionId: string,
   projectId: string
 ): Promise<ScanResult> {
   const result: ScanResult = {
@@ -30,21 +30,21 @@ export async function scanGmailAccountForReceipts(
   };
 
   try {
-    // Get the Gmail account details
-    const account = await storage.getGmailAccount(gmailAccountId);
-    if (!account) {
-      throw new Error('Gmail account not found');
+    // Get the Gmail connection details
+    const connection = await storage.getGmailConnection();
+    if (!connection) {
+      throw new Error('Gmail connection not found');
     }
 
     // Update status to syncing
-    await storage.updateGmailAccount(gmailAccountId, {
+    await storage.updateGmailConnection(connection.id, {
       syncStatus: 'syncing',
       lastError: null,
     });
 
     // Get the last sync time, or default to 7 days ago
-    const sinceDate = account.lastSyncAt 
-      ? new Date(account.lastSyncAt)
+    const sinceDate = connection.lastSyncAt 
+      ? new Date(connection.lastSyncAt)
       : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     // Search for receipt emails
@@ -102,8 +102,8 @@ export async function scanGmailAccountForReceipts(
       }
     }
 
-    // Update Gmail account sync status
-    await storage.updateGmailAccount(gmailAccountId, {
+    // Update Gmail connection sync status
+    await storage.updateGmailConnection(connection.id, {
       syncStatus: result.receiptsFailed > 0 ? 'error' : 'success',
       lastSyncAt: new Date(),
       lastError: result.errors.length > 0 ? result.errors.join('; ') : null,
@@ -112,41 +112,17 @@ export async function scanGmailAccountForReceipts(
   } catch (error) {
     console.error('Gmail scan failed:', error);
     
-    // Update Gmail account with error
-    await storage.updateGmailAccount(gmailAccountId, {
-      syncStatus: 'error',
-      lastError: error instanceof Error ? error.message : 'Unknown error occurred',
-    });
+    const connection = await storage.getGmailConnection();
+    if (connection) {
+      // Update Gmail connection with error
+      await storage.updateGmailConnection(connection.id, {
+        syncStatus: 'error',
+        lastError: error instanceof Error ? error.message : 'Unknown error occurred',
+      });
+    }
 
     result.errors.push(error instanceof Error ? error.message : 'Unknown error');
   }
 
   return result;
-}
-
-/**
- * Scan all active Gmail accounts for receipts
- */
-export async function scanAllGmailAccounts(projectId: string): Promise<ScanResult[]> {
-  const accounts = await storage.getActiveGmailAccounts();
-  
-  const results: ScanResult[] = [];
-  
-  for (const account of accounts) {
-    try {
-      const result = await scanGmailAccountForReceipts(account.id, projectId);
-      results.push(result);
-    } catch (error) {
-      console.error(`Failed to scan account ${account.id}:`, error);
-      results.push({
-        emailsScanned: 0,
-        receiptsFound: 0,
-        receiptsProcessed: 0,
-        receiptsFailed: 1,
-        errors: [error instanceof Error ? error.message : 'Unknown error'],
-      });
-    }
-  }
-  
-  return results;
 }
