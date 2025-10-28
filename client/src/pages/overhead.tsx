@@ -9,11 +9,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertOverheadEntrySchema, type OverheadEntry } from "@shared/schema";
+import { insertOverheadEntrySchema, type OverheadEntry, type Receipt } from "@shared/schema";
 import { Briefcase, Plus, Calendar } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { ReceiptUploader } from "@/components/ReceiptUploader";
 
 interface OverheadProps {
   projectId: string | null;
@@ -31,6 +32,7 @@ type FormData = z.infer<typeof formSchema>;
 export default function Overhead({ projectId }: OverheadProps) {
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
+  const [uploadedReceiptId, setUploadedReceiptId] = useState<string | null>(null);
 
   const { data: entries, isLoading } = useQuery<OverheadEntry[]>({
     queryKey: ["/api/projects", projectId, "overhead"],
@@ -54,11 +56,27 @@ export default function Overhead({ projectId }: OverheadProps) {
   }, [projectId, form]);
 
   const createMutation = useMutation({
-    mutationFn: (data: FormData) =>
-      apiRequest("POST", "/api/overhead", {
+    mutationFn: async (data: FormData) => {
+      const response = await apiRequest("POST", "/api/overhead", {
         ...data,
         cost: parseFloat(data.cost),
-      }),
+      });
+      const entry = await response.json();
+      
+      // Link receipt to overhead entry if one was uploaded
+      if (uploadedReceiptId && entry.id) {
+        try {
+          await apiRequest("POST", `/api/receipts/${uploadedReceiptId}/link`, {
+            entryType: "overhead",
+            entryId: entry.id,
+          });
+        } catch (error) {
+          console.error("Failed to link receipt:", error);
+        }
+      }
+      
+      return entry;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "overhead"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "stats"] });
@@ -72,6 +90,7 @@ export default function Overhead({ projectId }: OverheadProps) {
         cost: "",
         date: format(new Date(), "yyyy-MM-dd"),
       });
+      setUploadedReceiptId(null);
       setShowForm(false);
     },
     onError: () => {
@@ -82,6 +101,33 @@ export default function Overhead({ projectId }: OverheadProps) {
       });
     },
   });
+
+  const handleApplyReceipt = (receipt: Receipt, analysisData: any) => {
+    setUploadedReceiptId(receipt.id);
+    
+    // Populate date if available
+    if (analysisData.date) {
+      form.setValue("date", analysisData.date);
+    }
+    
+    // Populate cost from total
+    if (analysisData.total) {
+      form.setValue("cost", String(analysisData.total));
+    }
+    
+    // Populate description from vendor and/or line items
+    if (analysisData.vendor) {
+      form.setValue("description", analysisData.vendor);
+    } else if (analysisData.lineItems && analysisData.lineItems.length > 0) {
+      const descriptions = analysisData.lineItems.map((item: any) => item.description).join(", ");
+      form.setValue("description", descriptions);
+    }
+    
+    toast({
+      title: "Receipt Applied",
+      description: "Form fields populated from receipt data.",
+    });
+  };
 
   const handleSubmit = (data: FormData) => {
     createMutation.mutate(data);
@@ -123,6 +169,13 @@ export default function Overhead({ projectId }: OverheadProps) {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                {projectId && (
+                  <ReceiptUploader
+                    projectId={projectId}
+                    onApply={handleApplyReceipt}
+                  />
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}

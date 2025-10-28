@@ -10,11 +10,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertEquipmentLogSchema, type EquipmentLog } from "@shared/schema";
+import { insertEquipmentLogSchema, type EquipmentLog, type Receipt } from "@shared/schema";
 import { Truck, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { ReceiptUploader } from "@/components/ReceiptUploader";
 
 interface EquipmentProps {
   projectId: string | null;
@@ -38,6 +39,7 @@ type FormData = z.infer<typeof formSchema>;
 export default function Equipment({ projectId }: EquipmentProps) {
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
+  const [uploadedReceiptId, setUploadedReceiptId] = useState<string | null>(null);
 
   const { data: logs, isLoading } = useQuery<EquipmentLog[]>({
     queryKey: ["/api/projects", projectId, "equipment"],
@@ -65,13 +67,29 @@ export default function Equipment({ projectId }: EquipmentProps) {
   }, [projectId, form]);
 
   const createMutation = useMutation({
-    mutationFn: (data: FormData) =>
-      apiRequest("POST", "/api/equipment", {
+    mutationFn: async (data: FormData) => {
+      const response = await apiRequest("POST", "/api/equipment", {
         ...data,
         hours: parseFloat(data.hours),
         fuelCost: parseFloat(data.fuelCost),
         rentalCost: parseFloat(data.rentalCost),
-      }),
+      });
+      const log = await response.json();
+      
+      // Link receipt to equipment log if one was uploaded
+      if (uploadedReceiptId && log.id) {
+        try {
+          await apiRequest("POST", `/api/receipts/${uploadedReceiptId}/link`, {
+            entryType: "equipment",
+            entryId: log.id,
+          });
+        } catch (error) {
+          console.error("Failed to link receipt:", error);
+        }
+      }
+      
+      return log;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "equipment"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "stats"] });
@@ -88,6 +106,7 @@ export default function Equipment({ projectId }: EquipmentProps) {
         date: format(new Date(), "yyyy-MM-dd"),
         notes: "",
       });
+      setUploadedReceiptId(null);
       setShowForm(false);
     },
     onError: () => {
@@ -98,6 +117,39 @@ export default function Equipment({ projectId }: EquipmentProps) {
       });
     },
   });
+
+  const handleApplyReceipt = (receipt: Receipt, analysisData: any) => {
+    setUploadedReceiptId(receipt.id);
+    
+    // Populate date if available
+    if (analysisData.date) {
+      form.setValue("date", analysisData.date);
+    }
+    
+    // Populate equipment name from vendor
+    if (analysisData.vendor) {
+      form.setValue("equipmentName", analysisData.vendor);
+    }
+    
+    // Try to extract costs from line items or total
+    if (analysisData.lineItems && analysisData.lineItems.length > 0) {
+      const item = analysisData.lineItems[0];
+      if (item.description && item.description.toLowerCase().includes("fuel")) {
+        form.setValue("fuelCost", String(item.total || 0));
+      } else if (item.description && (item.description.toLowerCase().includes("rent") || item.description.toLowerCase().includes("lease"))) {
+        form.setValue("rentalCost", String(item.total || 0));
+      } else if (analysisData.total) {
+        form.setValue("rentalCost", String(analysisData.total));
+      }
+    } else if (analysisData.total) {
+      form.setValue("rentalCost", String(analysisData.total));
+    }
+    
+    toast({
+      title: "Receipt Applied",
+      description: "Form fields populated from receipt data.",
+    });
+  };
 
   const onSubmit = (data: FormData) => {
     createMutation.mutate(data);
@@ -139,6 +191,13 @@ export default function Equipment({ projectId }: EquipmentProps) {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {projectId && (
+                  <ReceiptUploader
+                    projectId={projectId}
+                    onApply={handleApplyReceipt}
+                  />
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}

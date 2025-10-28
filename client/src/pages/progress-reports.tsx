@@ -10,11 +10,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertProgressReportSchema, type ProgressReport } from "@shared/schema";
+import { insertProgressReportSchema, type ProgressReport, type Receipt } from "@shared/schema";
 import { TrendingUp, Plus, Trash2, Package } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
+import { ReceiptUploader } from "@/components/ReceiptUploader";
 
 interface ProgressReportsProps {
   projectId: string | null;
@@ -45,6 +46,7 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [materials, setMaterials] = useState<MaterialFormData[]>([]);
+  const [uploadedReceiptId, setUploadedReceiptId] = useState<string | null>(null);
 
   const { data: reports, isLoading } = useQuery<ProgressReport[]>({
     queryKey: ["/api/projects", projectId, "progress-reports"],
@@ -77,6 +79,19 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
         materials: materials.filter(m => m.itemName && m.quantity && m.unit && m.cost),
       });
       const report = await reportResponse.json();
+      
+      // Link receipt to progress report if one was uploaded
+      if (uploadedReceiptId && report.id) {
+        try {
+          await apiRequest("POST", `/api/receipts/${uploadedReceiptId}/link`, {
+            entryType: "material",
+            entryId: report.id,
+          });
+        } catch (error) {
+          console.error("Failed to link receipt:", error);
+        }
+      }
+      
       return report;
     },
     onSuccess: () => {
@@ -93,6 +108,7 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
         notes: "",
       });
       setMaterials([]);
+      setUploadedReceiptId(null);
       setShowForm(false);
     },
     onError: () => {
@@ -120,6 +136,44 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
     const updated = [...materials];
     updated[index][field] = value;
     setMaterials(updated);
+  };
+
+  const handleApplyReceipt = (receipt: Receipt, analysisData: any) => {
+    setUploadedReceiptId(receipt.id);
+    
+    // Populate date if available
+    if (analysisData.date) {
+      form.setValue("date", analysisData.date);
+    }
+    
+    // Populate materials from line items
+    if (analysisData.lineItems && analysisData.lineItems.length > 0) {
+      const newMaterials = analysisData.lineItems.map((item: any) => ({
+        itemName: item.description || "",
+        quantity: item.quantity ? String(item.quantity) : "",
+        unit: item.unit || "",
+        cost: item.total ? String(item.total) : (item.price ? String(item.price) : ""),
+      }));
+      setMaterials(newMaterials);
+      
+      toast({
+        title: "Receipt Applied",
+        description: `Added ${newMaterials.length} material${newMaterials.length !== 1 ? 's' : ''} from receipt.`,
+      });
+    } else if (analysisData.total) {
+      // If no line items, create a single material with vendor name and total
+      setMaterials([{
+        itemName: analysisData.vendor || "Materials",
+        quantity: "1",
+        unit: "lot",
+        cost: String(analysisData.total),
+      }]);
+      
+      toast({
+        title: "Receipt Applied",
+        description: "Added material entry from receipt total.",
+      });
+    }
   };
 
   if (!projectId) {
@@ -221,6 +275,15 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
                     </FormItem>
                   )}
                 />
+
+                {/* Receipt Upload Section */}
+                {projectId && (
+                  <ReceiptUploader
+                    projectId={projectId}
+                    onApply={handleApplyReceipt}
+                    acceptMultipleLineItems={true}
+                  />
+                )}
 
                 {/* Materials Section */}
                 <div className="space-y-4">

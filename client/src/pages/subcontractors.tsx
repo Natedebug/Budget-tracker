@@ -10,11 +10,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertSubcontractorEntrySchema, type SubcontractorEntry } from "@shared/schema";
+import { insertSubcontractorEntrySchema, type SubcontractorEntry, type Receipt } from "@shared/schema";
 import { Users, Plus, Calendar } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { ReceiptUploader } from "@/components/ReceiptUploader";
 
 interface SubcontractorsProps {
   projectId: string | null;
@@ -32,6 +33,7 @@ type FormData = z.infer<typeof formSchema>;
 export default function Subcontractors({ projectId }: SubcontractorsProps) {
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
+  const [uploadedReceiptId, setUploadedReceiptId] = useState<string | null>(null);
 
   const { data: entries, isLoading } = useQuery<SubcontractorEntry[]>({
     queryKey: ["/api/projects", projectId, "subcontractors"],
@@ -56,11 +58,27 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
   }, [projectId, form]);
 
   const createMutation = useMutation({
-    mutationFn: (data: FormData) =>
-      apiRequest("POST", "/api/subcontractors", {
+    mutationFn: async (data: FormData) => {
+      const response = await apiRequest("POST", "/api/subcontractors", {
         ...data,
         cost: parseFloat(data.cost),
-      }),
+      });
+      const entry = await response.json();
+      
+      // Link receipt to subcontractor entry if one was uploaded
+      if (uploadedReceiptId && entry.id) {
+        try {
+          await apiRequest("POST", `/api/receipts/${uploadedReceiptId}/link`, {
+            entryType: "subcontractor",
+            entryId: entry.id,
+          });
+        } catch (error) {
+          console.error("Failed to link receipt:", error);
+        }
+      }
+      
+      return entry;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "subcontractors"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "stats"] });
@@ -75,6 +93,7 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
         date: format(new Date(), "yyyy-MM-dd"),
         description: "",
       });
+      setUploadedReceiptId(null);
       setShowForm(false);
     },
     onError: () => {
@@ -85,6 +104,36 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
       });
     },
   });
+
+  const handleApplyReceipt = (receipt: Receipt, analysisData: any) => {
+    setUploadedReceiptId(receipt.id);
+    
+    // Populate date if available
+    if (analysisData.date) {
+      form.setValue("date", analysisData.date);
+    }
+    
+    // Populate contractor name from vendor
+    if (analysisData.vendor) {
+      form.setValue("contractorName", analysisData.vendor);
+    }
+    
+    // Populate cost from total
+    if (analysisData.total) {
+      form.setValue("cost", String(analysisData.total));
+    }
+    
+    // Populate description from line items if available
+    if (analysisData.lineItems && analysisData.lineItems.length > 0) {
+      const descriptions = analysisData.lineItems.map((item: any) => item.description).join(", ");
+      form.setValue("description", descriptions);
+    }
+    
+    toast({
+      title: "Receipt Applied",
+      description: "Form fields populated from receipt data.",
+    });
+  };
 
   const handleSubmit = (data: FormData) => {
     createMutation.mutate(data);
@@ -126,6 +175,13 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                {projectId && (
+                  <ReceiptUploader
+                    projectId={projectId}
+                    onApply={handleApplyReceipt}
+                  />
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}

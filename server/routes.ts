@@ -504,6 +504,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/receipts/:id/image", isAuthenticated, async (req, res) => {
+    try {
+      const receipt = await storage.getReceiptById(req.params.id);
+      if (!receipt) {
+        return res.status(404).json({ error: "Receipt not found" });
+      }
+      res.sendFile(path.resolve(receipt.storagePath));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch receipt image" });
+    }
+  });
+
   app.delete("/api/receipts/:id", isAuthenticated, async (req, res) => {
     try {
       await storage.deleteReceipt(req.params.id);
