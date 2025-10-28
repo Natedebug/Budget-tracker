@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, decimal, date, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, date, integer, timestamp, jsonb, index, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -26,6 +26,19 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Employees table
+export const employees = pgTable("employees", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  phone: varchar("phone"),
+  role: text("role"),
+  hasCompanyCard: boolean("has_company_card").notNull().default(false),
+  companyEmail: varchar("company_email"),
+  defaultPayRate: decimal("default_pay_rate", { precision: 8, scale: 2 }),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Projects table
@@ -201,6 +214,10 @@ export const receiptLinksRelations = relations(receiptLinks, ({ one }) => ({
   }),
 }));
 
+export const employeesRelations = relations(employees, ({ many }) => ({
+  timesheets: many(timesheets),
+}));
+
 // Insert schemas with coercion for numeric fields
 export const insertProjectSchema = createInsertSchema(projects, {
   totalBudget: z.coerce.number().positive(),
@@ -271,6 +288,13 @@ export const insertReceiptLinkSchema = createInsertSchema(receiptLinks).omit({
   createdAt: true,
 });
 
+export const insertEmployeeSchema = createInsertSchema(employees, {
+  defaultPayRate: z.coerce.number().nonnegative().optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
@@ -298,6 +322,9 @@ export type InsertReceipt = z.infer<typeof insertReceiptSchema>;
 
 export type ReceiptLink = typeof receiptLinks.$inferSelect;
 export type InsertReceiptLink = z.infer<typeof insertReceiptLinkSchema>;
+
+export type Employee = typeof employees.$inferSelect;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 
 // Replit Auth - User types
 export type UpsertUser = typeof users.$inferInsert;
