@@ -43,6 +43,10 @@ localPort = 37733
 externalPort = 4200
 
 [[ports]]
+localPort = 40469
+externalPort = 6800
+
+[[ports]]
 localPort = 45503
 externalPort = 3002
 
@@ -71,4 +75,4 @@ args = "npm run dev"
 waitForPort = 5000
 
 [agent]
-integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_openai_ai_integrations:1.0.0"]
+integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_openai_ai_integrations:1.0.0", "google-mail:1.0.0"]

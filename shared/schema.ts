@@ -39,6 +39,20 @@ export const employees = pgTable("employees", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Gmail accounts table - tracks linked Gmail accounts for receipt auto-import
+export const gmailAccounts = pgTable("gmail_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  gmailEmail: varchar("gmail_email").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  lastSyncAt: timestamp("last_sync_at"),
+  syncStatus: text("sync_status").default("pending"), // pending, syncing, success, error
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Projects table
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -214,6 +228,18 @@ export const receiptLinksRelations = relations(receiptLinks, ({ one }) => ({
 
 export const employeesRelations = relations(employees, ({ many }) => ({
   timesheets: many(timesheets),
+  gmailAccounts: many(gmailAccounts),
+}));
+
+export const gmailAccountsRelations = relations(gmailAccounts, ({ one }) => ({
+  employee: one(employees, {
+    fields: [gmailAccounts.employeeId],
+    references: [employees.id],
+  }),
+  user: one(users, {
+    fields: [gmailAccounts.userId],
+    references: [users.id],
+  }),
 }));
 
 // Insert schemas with coercion for numeric fields
@@ -293,6 +319,12 @@ export const insertEmployeeSchema = createInsertSchema(employees, {
   createdAt: true,
 });
 
+export const insertGmailAccountSchema = createInsertSchema(gmailAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
@@ -323,6 +355,9 @@ export type InsertReceiptLink = z.infer<typeof insertReceiptLinkSchema>;
 
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+
+export type GmailAccount = typeof gmailAccounts.$inferSelect;
+export type InsertGmailAccount = z.infer<typeof insertGmailAccountSchema>;
 
 // Replit Auth - User types
 export type UpsertUser = typeof users.$inferInsert;
