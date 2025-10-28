@@ -10,8 +10,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertTimesheetSchema, type Timesheet } from "@shared/schema";
+import { insertTimesheetSchema, type Timesheet, type Employee } from "@shared/schema";
 import { Clock, Plus, DollarSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,10 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
   const { data: timesheets, isLoading } = useQuery<Timesheet[]>({
     queryKey: ["/api/projects", projectId, "timesheets"],
     enabled: !!projectId,
+  });
+
+  const { data: employees, isLoading: isLoadingEmployees } = useQuery<Employee[]>({
+    queryKey: ["/api/employees/active"],
   });
 
   const form = useForm<FormData>({
@@ -139,14 +144,54 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
                   name="employeeName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Employee Name</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="John Smith" 
-                          {...field} 
-                          data-testid="input-employee-name"
-                        />
-                      </FormControl>
+                      <FormLabel>Employee</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          // Auto-fill pay rate when employee is selected
+                          const selectedEmployee = employees?.find(e => e.name === value);
+                          if (selectedEmployee) {
+                            // payRate is a string from the database (decimal type)
+                            const payRateNumber = typeof selectedEmployee.payRate === 'string' 
+                              ? parseFloat(selectedEmployee.payRate) 
+                              : selectedEmployee.payRate;
+                            
+                            // Guard against NaN
+                            if (!isNaN(payRateNumber) && isFinite(payRateNumber)) {
+                              form.setValue("payRate", payRateNumber.toFixed(2));
+                            } else {
+                              toast({
+                                title: "Invalid Pay Rate",
+                                description: "Employee has an invalid pay rate. Please enter manually.",
+                                variant: "destructive",
+                              });
+                            }
+                          }
+                        }}
+                        value={field.value}
+                        disabled={isLoadingEmployees}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-employee" disabled={isLoadingEmployees}>
+                            <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {employees?.map((employee) => {
+                            const payRateNumber = typeof employee.payRate === 'string'
+                              ? parseFloat(employee.payRate)
+                              : employee.payRate;
+                            const displayRate = !isNaN(payRateNumber) && isFinite(payRateNumber)
+                              ? payRateNumber.toFixed(2)
+                              : '0.00';
+                            return (
+                              <SelectItem key={employee.id} value={employee.name} data-testid={`select-employee-${employee.id}`}>
+                                {employee.name} (${displayRate}/hr)
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
