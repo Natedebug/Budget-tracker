@@ -178,7 +178,7 @@ export function ReceiptUploader({ projectId, onApply, acceptMultipleLineItems = 
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,application/pdf"
+            accept="image/jpeg,image/png,image/jpg"
             capture="environment"
             onChange={handleFileSelect}
             className="hidden"

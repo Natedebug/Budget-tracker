@@ -26,6 +26,18 @@ The application is built as a full-stack web application with a React-based fron
   - Materials properly calculated and displayed in dashboard cost breakdown
   - End-to-end testing confirmed atomic creation with proper database transaction behavior
 
+- ✅ **AI-Powered Receipt Upload and Analysis**: Implemented complete receipt scanning with automatic data extraction
+  - Integrated OpenAI GPT-4o Vision for receipt image analysis
+  - Created receipts and receipt_links database tables for polymorphic entry linking
+  - Built file upload infrastructure with multer (JPG/PNG support, 10MB limit)
+  - Receipt analyzer service extracts vendor, date, line items, totals, tax from images
+  - Mobile-friendly ReceiptUploader component with camera capture and drag-drop
+  - Auto-fill form fields from receipt data across all entry types (materials, equipment, subcontractors, overhead)
+  - Progress reports can create multiple material rows from receipt line items
+  - Receipt linking system supports attaching multiple receipts to entries
+  - Image preview and serving with ReceiptPreview component
+  - Field mapping standardized between backend analyzer and frontend (price/total/unit/quantity)
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

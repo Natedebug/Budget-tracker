@@ -4,8 +4,9 @@ import { readFileSync } from "fs";
 interface ReceiptLineItem {
   description: string;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
+  unit: string;
+  price: number; // unit price
+  total: number; // total price for line item
 }
 
 export interface ReceiptAnalysisData {
@@ -46,15 +47,17 @@ export async function analyzeReceipt(filePath: string): Promise<ReceiptAnalysisD
 - date: The date of the transaction (YYYY-MM-DD format)
 - lineItems: An array of items purchased, each with:
   - description: Item name/description
-  - quantity: Quantity purchased
-  - unitPrice: Price per unit
-  - totalPrice: Total price for this line item
-- subtotal: Subtotal amount (before tax)
-- tax: Tax amount
-- total: Total amount
+  - quantity: Quantity purchased (as a number)
+  - unit: Unit of measurement (e.g., "kg", "units", "hours", "each", "lbs")
+  - price: Price per unit (as a number)
+  - total: Total price for this line item (quantity × price, as a number)
+- subtotal: Subtotal amount before tax (as a number)
+- tax: Tax amount (as a number)
+- total: Total amount (as a number)
 - currency: Currency code (e.g., "USD")
 
-If any field cannot be determined, use null for that field. For lineItems, do your best to extract as many items as possible.`
+If any field cannot be determined, use null for that field. For lineItems, do your best to extract as many items as possible. 
+Always use numbers for quantity, price, total, subtotal, and tax fields - not strings.`
             },
             {
               type: "image_url",
@@ -90,8 +93,6 @@ function getMimeType(filePath: string): string {
       return 'image/jpeg';
     case 'png':
       return 'image/png';
-    case 'pdf':
-      return 'application/pdf';
     default:
       return 'image/jpeg';
   }
