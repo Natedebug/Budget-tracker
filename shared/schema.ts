@@ -32,11 +32,9 @@ export const users = pgTable("users", {
 export const employees = pgTable("employees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  phone: varchar("phone"),
-  role: text("role"),
-  hasCompanyCard: boolean("has_company_card").notNull().default(false),
   companyEmail: varchar("company_email"),
-  defaultPayRate: decimal("default_pay_rate", { precision: 8, scale: 2 }),
+  payRate: decimal("pay_rate", { precision: 8, scale: 2 }).notNull(),
+  hasCompanyCard: boolean("has_company_card").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -289,7 +287,7 @@ export const insertReceiptLinkSchema = createInsertSchema(receiptLinks).omit({
 });
 
 export const insertEmployeeSchema = createInsertSchema(employees, {
-  defaultPayRate: z.coerce.number().nonnegative().optional(),
+  payRate: z.coerce.number().positive(),
 }).omit({
   id: true,
   createdAt: true,

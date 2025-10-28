@@ -16,6 +16,7 @@ import Equipment from "@/pages/equipment";
 import Subcontractors from "@/pages/subcontractors";
 import Overhead from "@/pages/overhead";
 import Projects from "@/pages/projects";
+import Employees from "@/pages/employees";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 import { useState, useEffect } from "react";
@@ -31,6 +32,7 @@ function Router({ projectId, onProjectSelect }: { projectId: string | null; onPr
       <Route path="/subcontractors" component={() => <Subcontractors projectId={projectId} />} />
       <Route path="/overhead" component={() => <Overhead projectId={projectId} />} />
       <Route path="/projects" component={() => <Projects onProjectSelect={onProjectSelect} />} />
+      <Route path="/employees" component={Employees} />
       <Route component={NotFound} />
     </Switch>
   );
