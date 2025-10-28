@@ -32,7 +32,7 @@ function Router({ projectId, onProjectSelect }: { projectId: string | null; onPr
   );
 }
 
-function App() {
+function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
@@ -59,65 +59,64 @@ function App() {
 
   // Show landing page for unauthenticated users or during loading
   if (isLoading || !isAuthenticated) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Landing />
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
+    return <Landing />;
   }
 
   // Show authenticated app
   return (
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar 
+          selectedProjectId={selectedProjectId} 
+          onProjectChange={handleProjectChange}
+        />
+        <div className="flex flex-col flex-1">
+          <header className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-50">
+            <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <div className="flex items-center gap-4">
+              {user && (
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.profileImageUrl || undefined} className="object-cover" />
+                    <AvatarFallback>
+                      {user.firstName?.[0] || user.email?.[0] || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="hidden sm:block">
+                    <p className="text-sm font-medium" data-testid="text-user-name">
+                      {user.firstName && user.lastName 
+                        ? `${user.firstName} ${user.lastName}`
+                        : user.email || 'User'}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    title="Logout"
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              <ThemeToggle />
+            </div>
+          </header>
+          <main className="flex-1 overflow-auto bg-background">
+            <Router projectId={selectedProjectId} onProjectSelect={handleProjectChange} />
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <SidebarProvider style={style as React.CSSProperties}>
-          <div className="flex h-screen w-full">
-            <AppSidebar 
-              selectedProjectId={selectedProjectId} 
-              onProjectChange={handleProjectChange}
-            />
-            <div className="flex flex-col flex-1">
-              <header className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-50">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <div className="flex items-center gap-4">
-                  {user && (
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.profileImageUrl || undefined} className="object-cover" />
-                        <AvatarFallback>
-                          {user.firstName?.[0] || user.email?.[0] || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="hidden sm:block">
-                        <p className="text-sm font-medium" data-testid="text-user-name">
-                          {user.firstName && user.lastName 
-                            ? `${user.firstName} ${user.lastName}`
-                            : user.email || 'User'}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleLogout}
-                        title="Logout"
-                        data-testid="button-logout"
-                      >
-                        <LogOut className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                  <ThemeToggle />
-                </div>
-              </header>
-              <main className="flex-1 overflow-auto bg-background">
-                <Router projectId={selectedProjectId} onProjectSelect={handleProjectChange} />
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
+        <AuthenticatedApp />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
