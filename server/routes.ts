@@ -13,6 +13,7 @@ import {
   insertReceiptSchema,
   insertReceiptLinkSchema,
   insertEmployeeSchema,
+  insertGmailAccountSchema,
 } from "@shared/schema";
 import multer from "multer";
 import path from "path";
@@ -584,6 +585,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete employee" });
+    }
+  });
+
+  // Gmail Accounts
+  app.get("/api/gmail-accounts", isAuthenticated, async (req, res) => {
+    try {
+      const accounts = await storage.getAllGmailAccounts();
+      res.json(accounts);
+    } catch (error) {
+      console.error('Gmail accounts fetch error:', error);
+      res.status(500).json({ error: "Failed to fetch Gmail accounts" });
+    }
+  });
+
+  app.get("/api/gmail-accounts/active", isAuthenticated, async (req, res) => {
+    try {
+      const accounts = await storage.getActiveGmailAccounts();
+      res.json(accounts);
+    } catch (error) {
+      console.error('Active Gmail accounts fetch error:', error);
+      res.status(500).json({ error: "Failed to fetch active Gmail accounts" });
+    }
+  });
+
+  app.get("/api/gmail-accounts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const account = await storage.getGmailAccount(req.params.id);
+      if (!account) {
+        return res.status(404).json({ error: "Gmail account not found" });
+      }
+      res.json(account);
+    } catch (error) {
+      console.error('Gmail account fetch error:', error);
+      res.status(500).json({ error: "Failed to fetch Gmail account" });
+    }
+  });
+
+  app.post("/api/gmail-accounts", isAuthenticated, async (req: any, res) => {
+    try {
+      // Add current user ID to the account data
+      const userId = req.user.claims.sub;
+      const data = insertGmailAccountSchema.parse({
+        ...req.body,
+        userId,
+      });
+      const account = await storage.createGmailAccount(data);
+      res.status(201).json(account);
+    } catch (error) {
+      console.error('Gmail account creation error:', error);
+      res.status(400).json({ error: "Invalid Gmail account data" });
+    }
+  });
+
+  app.patch("/api/gmail-accounts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const account = await storage.updateGmailAccount(req.params.id, req.body);
+      res.json(account);
+    } catch (error) {
+      console.error('Gmail account update error:', error);
+      res.status(400).json({ error: "Failed to update Gmail account" });
+    }
+  });
+
+  app.delete("/api/gmail-accounts/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteGmailAccount(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Gmail account delete error:', error);
+      res.status(500).json({ error: "Failed to delete Gmail account" });
+    }
+  });
+
+  // Trigger manual sync for a Gmail account
+  app.post("/api/gmail-accounts/:id/sync", isAuthenticated, async (req, res) => {
+    try {
+      const account = await storage.getGmailAccount(req.params.id);
+      if (!account) {
+        return res.status(404).json({ error: "Gmail account not found" });
+      }
+      
+      // TODO: Implement actual sync logic with Gmail service
+      // For now, just update the sync status
+      await storage.updateGmailAccount(req.params.id, {
+        syncStatus: "pending",
+        lastError: null,
+      });
+      
+      res.json({ message: "Sync initiated" });
+    } catch (error) {
+      console.error('Gmail sync error:', error);
+      res.status(500).json({ error: "Failed to initiate sync" });
     }
   });
 
