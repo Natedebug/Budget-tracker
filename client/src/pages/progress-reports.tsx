@@ -11,7 +11,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertProgressReportSchema, type ProgressReport } from "@shared/schema";
-import { TrendingUp, Plus } from "lucide-react";
+import { TrendingUp, Plus, Trash2, Package } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
@@ -19,6 +19,13 @@ import { format } from "date-fns";
 interface ProgressReportsProps {
   projectId: string | null;
 }
+
+const materialSchema = z.object({
+  itemName: z.string().min(1, "Item name required"),
+  quantity: z.string().min(1, "Quantity required"),
+  unit: z.string().min(1, "Unit required"),
+  cost: z.string().min(1, "Cost required"),
+});
 
 const formSchema = insertProgressReportSchema.extend({
   percentComplete: z.string().min(1, "Progress percentage required").refine(
@@ -32,10 +39,12 @@ const formSchema = insertProgressReportSchema.extend({
 });
 
 type FormData = z.infer<typeof formSchema>;
+type MaterialFormData = z.infer<typeof materialSchema>;
 
 export default function ProgressReports({ projectId }: ProgressReportsProps) {
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
+  const [materials, setMaterials] = useState<MaterialFormData[]>([]);
 
   const { data: reports, isLoading } = useQuery<ProgressReport[]>({
     queryKey: ["/api/projects", projectId, "progress-reports"],
@@ -60,17 +69,22 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
   }, [projectId, form]);
 
   const createMutation = useMutation({
-    mutationFn: (data: FormData) =>
-      apiRequest("POST", "/api/progress-reports", {
+    mutationFn: async (data: FormData) => {
+      // Create progress report with materials in a single atomic request
+      const reportResponse = await apiRequest("POST", "/api/progress-reports", {
         ...data,
         percentComplete: parseInt(data.percentComplete),
-      }),
+        materials: materials.filter(m => m.itemName && m.quantity && m.unit && m.cost),
+      });
+      const report = await reportResponse.json();
+      return report;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "progress-reports"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "stats"] });
       toast({
         title: "Progress Report Added",
-        description: "Progress report has been saved successfully.",
+        description: `Progress report with ${materials.length} material${materials.length !== 1 ? 's' : ''} has been saved successfully.`,
       });
       form.reset({
         projectId: projectId || "",
@@ -78,6 +92,7 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
         date: format(new Date(), "yyyy-MM-dd"),
         notes: "",
       });
+      setMaterials([]);
       setShowForm(false);
     },
     onError: () => {
@@ -91,6 +106,20 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
 
   const onSubmit = (data: FormData) => {
     createMutation.mutate(data);
+  };
+
+  const addMaterial = () => {
+    setMaterials([...materials, { itemName: "", quantity: "", unit: "", cost: "" }]);
+  };
+
+  const removeMaterial = (index: number) => {
+    setMaterials(materials.filter((_, i) => i !== index));
+  };
+
+  const updateMaterial = (index: number, field: keyof MaterialFormData, value: string) => {
+    const updated = [...materials];
+    updated[index][field] = value;
+    setMaterials(updated);
   };
 
   if (!projectId) {
@@ -128,7 +157,7 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -180,7 +209,11 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
                         <Textarea 
                           placeholder="Milestones reached, work completed, materials used..."
                           className="min-h-24"
-                          {...field} 
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                           data-testid="input-notes"
                         />
                       </FormControl>
@@ -189,11 +222,99 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
                   )}
                 />
 
+                {/* Materials Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-medium text-foreground">Materials Used</h3>
+                      <p className="text-sm text-muted-foreground">Track materials consumed during this period</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addMaterial}
+                      data-testid="button-add-material"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Material
+                    </Button>
+                  </div>
+
+                  {materials.length > 0 && (
+                    <div className="space-y-3">
+                      {materials.map((material, index) => (
+                        <Card key={index} className="p-4" data-testid={`card-material-${index}`}>
+                          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                            <div className="md:col-span-2">
+                              <Input
+                                placeholder="Item name (e.g., Concrete)"
+                                value={material.itemName}
+                                onChange={(e) => updateMaterial(index, "itemName", e.target.value)}
+                                data-testid={`input-material-name-${index}`}
+                              />
+                            </div>
+                            <div>
+                              <Input
+                                type="number"
+                                placeholder="Quantity"
+                                value={material.quantity}
+                                onChange={(e) => updateMaterial(index, "quantity", e.target.value)}
+                                data-testid={`input-material-quantity-${index}`}
+                              />
+                            </div>
+                            <div>
+                              <Input
+                                placeholder="Unit (e.g., cubic yards)"
+                                value={material.unit}
+                                onChange={(e) => updateMaterial(index, "unit", e.target.value)}
+                                data-testid={`input-material-unit-${index}`}
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Input
+                                type="number"
+                                placeholder="Cost ($)"
+                                value={material.cost}
+                                onChange={(e) => updateMaterial(index, "cost", e.target.value)}
+                                data-testid={`input-material-cost-${index}`}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeMaterial(index)}
+                                data-testid={`button-remove-material-${index}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+
+                  {materials.length === 0 && (
+                    <Card className="p-8">
+                      <div className="flex flex-col items-center text-center">
+                        <Package className="w-10 h-10 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          No materials added yet. Click "Add Material" to track material usage.
+                        </p>
+                      </div>
+                    </Card>
+                  )}
+                </div>
+
                 <div className="flex gap-2 justify-end">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowForm(false)}
+                    onClick={() => {
+                      setShowForm(false);
+                      setMaterials([]);
+                    }}
                     data-testid="button-cancel"
                   >
                     Cancel
@@ -225,7 +346,7 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
             ))}
           </>
         ) : reports && reports.length > 0 ? (
-          reports.map((report) => (
+          reports.map((report: ProgressReport) => (
             <Card key={report.id} data-testid={`card-progress-${report.id}`}>
               <CardContent className="p-4 md:p-6">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">

@@ -62,6 +62,7 @@ export const progressReports = pgTable("progress_reports", {
   percentComplete: integer("percent_complete").notNull(),
   date: date("date").notNull(),
   notes: text("notes"),
+  photoUrls: text("photo_urls").array(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -73,6 +74,7 @@ export const materials = pgTable("materials", {
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   unit: text("unit").notNull(),
   cost: decimal("cost", { precision: 10, scale: 2 }).notNull(),
+  photoUrl: text("photo_url"),
 });
 
 // Equipment logs table

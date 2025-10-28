@@ -45,6 +45,7 @@ export interface IStorage {
   // Progress Reports
   getProjectProgressReports(projectId: string): Promise<ProgressReport[]>;
   createProgressReport(report: InsertProgressReport): Promise<ProgressReport>;
+  createProgressReportWithMaterials(report: InsertProgressReport, materials: InsertMaterial[]): Promise<ProgressReport>;
 
   // Equipment Logs
   getProjectEquipmentLogs(projectId: string): Promise<EquipmentLog[]>;
@@ -136,6 +137,31 @@ export class DatabaseStorage implements IStorage {
       .values(insertReport)
       .returning();
     return report;
+  }
+
+  async createProgressReportWithMaterials(
+    insertReport: InsertProgressReport,
+    insertMaterials: InsertMaterial[]
+  ): Promise<ProgressReport> {
+    return await db.transaction(async (tx) => {
+      // Create progress report
+      const [report] = await tx
+        .insert(progressReports)
+        .values(insertReport)
+        .returning();
+
+      // Create all materials linked to this report
+      if (insertMaterials.length > 0) {
+        await tx.insert(materials).values(
+          insertMaterials.map((material) => ({
+            ...material,
+            progressReportId: report.id,
+          }))
+        );
+      }
+
+      return report;
+    });
   }
 
   // Equipment Logs

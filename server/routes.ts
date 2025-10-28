@@ -255,10 +255,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/progress-reports", isAuthenticated, async (req, res) => {
     try {
-      const data = insertProgressReportSchema.parse(req.body);
-      const report = await storage.createProgressReport(data);
+      const { materials: materialsData, ...reportData } = req.body;
+      
+      // Validate progress report data
+      const validatedReport = insertProgressReportSchema.parse(reportData);
+      
+      // Validate materials if provided
+      let validatedMaterials: any[] = [];
+      if (materialsData && Array.isArray(materialsData)) {
+        validatedMaterials = materialsData.map((material: any) => 
+          insertMaterialSchema.omit({ progressReportId: true }).parse(material)
+        );
+      }
+      
+      // Create progress report with materials in a single transaction
+      const report = await storage.createProgressReportWithMaterials(
+        validatedReport,
+        validatedMaterials
+      );
+      
       res.status(201).json(report);
     } catch (error) {
+      console.error('Progress report creation error:', error);
       res.status(400).json({ error: "Invalid progress report data" });
     }
   });
@@ -335,11 +353,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/materials", isAuthenticated, async (req, res) => {
     try {
+      console.log('Material request body:', JSON.stringify(req.body, null, 2));
       const data = insertMaterialSchema.parse(req.body);
       const material = await storage.createMaterial(data);
       res.status(201).json(material);
     } catch (error) {
-      res.status(400).json({ error: "Invalid material data" });
+      console.error('Material validation error:', error);
+      res.status(400).json({ error: "Invalid material data", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
