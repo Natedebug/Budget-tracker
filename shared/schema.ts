@@ -40,7 +40,11 @@ export const employees = pgTable("employees", {
 });
 
 // Gmail connection table - tracks the company Gmail inbox for receipt auto-import
-// Note: Only ONE connection is supported due to Replit Gmail connector limitations
+// IMPORTANT: Only ONE active connection is supported. This is enforced via:
+// 1. PostgreSQL advisory lock (pg_advisory_xact_lock) in storage.createGmailConnection()
+//    This serializes all connection creation attempts, even when table is empty
+// 2. Frontend UI shows only one connection
+// 3. API endpoints designed for single connection
 export const gmailConnection = pgTable("gmail_connection", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

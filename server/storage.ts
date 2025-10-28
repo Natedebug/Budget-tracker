@@ -386,6 +386,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Gmail Connection (single company inbox)
+  // IMPORTANT: This enforces a single active connection model. Only one Gmail
+  // connection can be active at any time for the entire company.
   async getGmailConnection(): Promise<GmailConnection | undefined> {
     const [connection] = await db
       .select()
@@ -396,16 +398,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createGmailConnection(insertConnection: InsertGmailConnection): Promise<GmailConnection> {
-    // First, deactivate any existing connections (only one active at a time)
-    await db
-      .update(gmailConnection)
-      .set({ isActive: false, updatedAt: new Date() });
-    
-    const [connection] = await db
-      .insert(gmailConnection)
-      .values(insertConnection)
-      .returning();
-    return connection;
+    // Enforce single connection: use PostgreSQL advisory lock to serialize all connection creates
+    // This prevents concurrent transactions from creating multiple active connections
+    // Advisory lock ID: hashCode("gmail_connection_singleton") = 1234567890
+    return await db.transaction(async (tx) => {
+      // Acquire advisory lock (automatically released at transaction end)
+      // This serializes all createGmailConnection calls, even when table is empty
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(1234567890)`);
+      
+      // Deactivate ALL existing active connections
+      await tx
+        .update(gmailConnection)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(gmailConnection.isActive, true));
+      
+      // Insert the new connection
+      const [connection] = await tx
+        .insert(gmailConnection)
+        .values(insertConnection)
+        .returning();
+      
+      return connection;
+    });
   }
 
   async updateGmailConnection(id: string, updateData: Partial<InsertGmailConnection>): Promise<GmailConnection> {

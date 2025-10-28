@@ -85,8 +85,8 @@ export default function GmailConnectionPage({ projectId }: GmailConnectionPagePr
   });
 
   const disconnectMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/gmail-connection/${id}`, {
+    mutationFn: async () => {
+      const response = await fetch("/api/gmail-connection", {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to disconnect");
@@ -249,7 +249,7 @@ export default function GmailConnectionPage({ projectId }: GmailConnectionPagePr
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => disconnectMutation.mutate(connection.id)}
+                onClick={() => disconnectMutation.mutate()}
                 disabled={disconnectMutation.isPending}
                 data-testid="button-disconnect"
               >

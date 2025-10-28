@@ -616,9 +616,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/gmail-connection/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/gmail-connection", isAuthenticated, async (req, res) => {
     try {
-      await storage.deleteGmailConnection(req.params.id);
+      const connection = await storage.getGmailConnection();
+      if (!connection) {
+        return res.status(404).json({ error: "No Gmail connection found" });
+      }
+      await storage.deleteGmailConnection(connection.id);
       res.status(204).send();
     } catch (error) {
       console.error('Gmail connection delete error:', error);

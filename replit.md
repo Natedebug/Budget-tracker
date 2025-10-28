@@ -53,6 +53,7 @@ The application is built as a full-stack web application with a React-based fron
   - **Architecture Decision**: Single company Gmail inbox (e.g., receipts@company.com) where employees forward receipts
   - Created `gmail_connection` table replacing `gmail_accounts` table (database schema migrated)
   - Removed `employeeId` foreign key - one connection per company, not per employee
+  - **Single Connection Enforcement**: PostgreSQL advisory lock (`pg_advisory_xact_lock`) in storage layer serializes all connection creation attempts, preventing race conditions even when table is empty
   - Simplified API endpoints: GET/POST/DELETE `/api/gmail-connection`, POST `/api/gmail-connection/sync`
   - Updated Gmail service and receipt scanner for single-connection workflow
   - Receipt scanner processes all emails in company inbox, optionally matches sender to employee emails
