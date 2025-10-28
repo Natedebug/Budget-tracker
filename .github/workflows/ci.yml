@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: budgetsync_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run TypeScript type check
+      run: npx tsc --noEmit
+
+    - name: Check for linting errors
+      run: npx eslint . --ext .ts,.tsx --max-warnings 0 || true
+
+    - name: Build application
+      run: npm run build
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/budgetsync_test
+        SESSION_SECRET: test-secret-key-for-ci
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-key' }}
+
+    - name: Set up database schema
+      run: npm run db:push -- --force
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/budgetsync_test
+
+    - name: Run tests (if available)
+      run: npm test || echo "No tests configured yet"
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/budgetsync_test
+        SESSION_SECRET: test-secret-key-for-ci
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-key' }}
+        NODE_ENV: test

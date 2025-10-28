@@ -1,6 +1,55 @@
+# Dependencies
 node_modules
+
+# Build outputs
 dist
-.DS_Store
 server/public
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+logs/
+*.log
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Replit specific
+.replit
+replit.nix
+.config/
+.cache/
 vite.config.ts.*
+
+# Uploads and temporary files
+uploads/*
+!uploads/.gitkeep
+attached_assets/receipts/*
+!attached_assets/receipts/.gitkeep
 *.tar.gz
+
+# Testing
+coverage/
+.nyc_output/
+
+# Database
+*.db
+*.sqlite
+
+# Misc
+.turbo/
+*.tsbuildinfo
