@@ -10,6 +10,7 @@ import {
   users,
   receipts,
   receiptLinks,
+  employees,
   type Project, 
   type InsertProject,
   type Timesheet,
@@ -30,6 +31,8 @@ import {
   type InsertReceipt,
   type ReceiptLink,
   type InsertReceiptLink,
+  type Employee,
+  type InsertEmployee,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -77,6 +80,14 @@ export interface IStorage {
   getProjectReceipts(projectId: string): Promise<Receipt[]>;
   getReceiptById(id: string): Promise<Receipt | undefined>;
   deleteReceipt(id: string): Promise<void>;
+
+  // Employees
+  getAllEmployees(): Promise<Employee[]>;
+  getActiveEmployees(): Promise<Employee[]>;
+  getEmployee(id: string): Promise<Employee | undefined>;
+  createEmployee(employee: InsertEmployee): Promise<Employee>;
+  updateEmployee(id: string, employee: Partial<InsertEmployee>): Promise<Employee>;
+  deleteEmployee(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -314,6 +325,55 @@ export class DatabaseStorage implements IStorage {
 
   async deleteReceipt(id: string): Promise<void> {
     await db.delete(receipts).where(eq(receipts.id, id));
+  }
+
+  // Employees
+  async getAllEmployees(): Promise<Employee[]> {
+    return await db
+      .select()
+      .from(employees)
+      .orderBy(desc(employees.createdAt));
+  }
+
+  async getActiveEmployees(): Promise<Employee[]> {
+    return await db
+      .select()
+      .from(employees)
+      .where(eq(employees.isActive, true))
+      .orderBy(employees.name);
+  }
+
+  async getEmployee(id: string): Promise<Employee | undefined> {
+    const [employee] = await db
+      .select()
+      .from(employees)
+      .where(eq(employees.id, id));
+    return employee || undefined;
+  }
+
+  async createEmployee(insertEmployee: InsertEmployee): Promise<Employee> {
+    const [employee] = await db
+      .insert(employees)
+      .values(insertEmployee)
+      .returning();
+    return employee;
+  }
+
+  async updateEmployee(id: string, updateData: Partial<InsertEmployee>): Promise<Employee> {
+    const [employee] = await db
+      .update(employees)
+      .set(updateData)
+      .where(eq(employees.id, id))
+      .returning();
+    return employee;
+  }
+
+  async deleteEmployee(id: string): Promise<void> {
+    // Soft delete - just mark as inactive
+    await db
+      .update(employees)
+      .set({ isActive: false })
+      .where(eq(employees.id, id));
   }
 }
 
