@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useQuery } from "@tanstack/react-query";
 import { type Project } from "@shared/schema";
@@ -73,8 +74,9 @@ const menuItems = [
 ];
 
 export function AppSidebar({ selectedProjectId, onProjectChange }: AppSidebarProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [selectOpen, setSelectOpen] = useState(false);
+  const { isMobile, setOpenMobile } = useSidebar();
   
   const { data: projects } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -83,6 +85,13 @@ export function AppSidebar({ selectedProjectId, onProjectChange }: AppSidebarPro
   const handleProjectSelect = (value: string) => {
     onProjectChange(value);
     setSelectOpen(false);
+  };
+
+  const handleNavigationClick = (url: string) => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+    setLocation(url);
   };
 
   const handleExport = async () => {
@@ -155,7 +164,11 @@ export function AppSidebar({ selectedProjectId, onProjectChange }: AppSidebarPro
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === item.url}
+                    onClick={() => handleNavigationClick(item.url)}
+                  >
                     <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
                       <item.icon />
                       <span>{item.title}</span>
