@@ -51,7 +51,7 @@ jobs:
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/budgetsync_test
         SESSION_SECRET: test-secret-key-for-ci
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-key' }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     - name: Set up database schema
       run: npm run db:push -- --force
@@ -63,5 +63,5 @@ jobs:
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/budgetsync_test
         SESSION_SECRET: test-secret-key-for-ci
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-key' }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         NODE_ENV: test
