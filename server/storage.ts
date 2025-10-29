@@ -78,7 +78,7 @@ export interface IStorage {
 
   // Receipts
   createReceipt(receipt: InsertReceipt): Promise<Receipt>;
-  updateReceiptAnalysis(id: string, analysisData: any): Promise<Receipt>;
+  updateReceiptAnalysis(id: string, updates: { analysisData?: any; status?: Receipt["status"] }): Promise<Receipt>;
   createReceiptLink(link: InsertReceiptLink): Promise<ReceiptLink>;
   getProjectReceipts(projectId: string): Promise<Receipt[]>;
   getReceiptById(id: string): Promise<Receipt | undefined>;
@@ -296,13 +296,26 @@ export class DatabaseStorage implements IStorage {
     return receipt;
   }
 
-  async updateReceiptAnalysis(id: string, analysisData: any): Promise<Receipt> {
+  async updateReceiptAnalysis(id: string, updates: { analysisData?: any; status?: Receipt["status"] }): Promise<Receipt> {
+    const updatePayload: Partial<Pick<Receipt, 'status' | 'analysisData'>> = {};
+
+    if (Object.prototype.hasOwnProperty.call(updates, "analysisData")) {
+      updatePayload.analysisData = updates.analysisData;
+    }
+
+    if (updates.status) {
+      updatePayload.status = updates.status;
+    } else if (Object.prototype.hasOwnProperty.call(updates, "analysisData")) {
+      updatePayload.status = 'analyzed';
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      throw new Error("No updates provided for receipt analysis");
+    }
+
     const [receipt] = await db
       .update(receipts)
-      .set({
-        status: 'analyzed',
-        analysisData: analysisData,
-      })
+      .set(updatePayload)
       .where(eq(receipts.id, id))
       .returning();
     return receipt;

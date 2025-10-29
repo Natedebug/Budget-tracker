@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { readFileSync } from "fs";
+import { promises as fs } from "fs";
 
 interface ReceiptLineItem {
   description: string;
@@ -29,7 +29,7 @@ const openai = new OpenAI({
 
 export async function analyzeReceipt(filePath: string): Promise<ReceiptAnalysisData> {
   try {
-    const imageBuffer = readFileSync(filePath);
+    const imageBuffer = await fs.readFile(filePath);
     const base64Image = imageBuffer.toString('base64');
     
     const mimeType = getMimeType(filePath);

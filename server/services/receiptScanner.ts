@@ -2,7 +2,7 @@
 import { storage } from '../storage';
 import { searchReceiptEmails, downloadAttachment, type EmailMessage } from './gmailService';
 import { analyzeReceipt } from './receiptAnalyzer';
-import * as fs from 'fs';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import type { InsertReceipt } from '@shared/schema';
 
@@ -60,7 +60,7 @@ export async function scanGmailAccountForReceipts(
           const filePath = await downloadAttachment(attachment);
           
           // Get file stats
-          const stats = fs.statSync(filePath);
+          const stats = await fs.stat(filePath);
           const filename = path.basename(filePath);
 
           // Create receipt record
@@ -80,7 +80,10 @@ export async function scanGmailAccountForReceipts(
             const analysisData = await analyzeReceipt(filePath);
             
             // Update receipt with analysis data
-            await storage.updateReceiptAnalysis(receipt.id, analysisData);
+            await storage.updateReceiptAnalysis(receipt.id, {
+              analysisData,
+              status: 'analyzed',
+            });
             
             result.receiptsProcessed++;
           } catch (analysisError) {
@@ -88,7 +91,10 @@ export async function scanGmailAccountForReceipts(
             
             // Mark receipt as failed
             await storage.updateReceiptAnalysis(receipt.id, {
-              error: analysisError instanceof Error ? analysisError.message : 'Analysis failed',
+              analysisData: {
+                error: analysisError instanceof Error ? analysisError.message : 'Analysis failed',
+              },
+              status: 'failed',
             });
             
             result.receiptsFailed++;

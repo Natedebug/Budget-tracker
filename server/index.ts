@@ -53,8 +53,11 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    if (status >= 500) {
+      log(`Unhandled error: ${err instanceof Error ? err.stack ?? err.message : String(err)}`);
+    }
+
     res.status(status).json({ message });
-    throw err;
   });
 
   // importantly only setup vite in development and after
