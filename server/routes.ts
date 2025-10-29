@@ -15,6 +15,7 @@ import {
   insertEmployeeSchema,
   insertGmailConnectionSchema,
 } from "@shared/schema";
+import { promises as fs } from "fs";
 import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -443,7 +444,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const analysisData = await analyzeReceipt(receipt.storagePath);
-      const updatedReceipt = await storage.updateReceiptAnalysis(receiptId, analysisData);
+      const updatedReceipt = await storage.updateReceiptAnalysis(receiptId, {
+        analysisData,
+        status: 'analyzed',
+      });
       
       res.json(updatedReceipt);
     } catch (error) {
@@ -452,7 +456,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const receiptId = req.params.id;
       const receipt = await storage.getReceiptById(receiptId);
       if (receipt) {
-        await storage.updateReceiptAnalysis(receiptId, { error: error instanceof Error ? error.message : 'Analysis failed' });
+        await storage.updateReceiptAnalysis(receiptId, {
+          analysisData: { error: error instanceof Error ? error.message : 'Analysis failed' },
+          status: 'failed',
+        });
       }
       
       res.status(500).json({ error: "Failed to analyze receipt" });
@@ -521,7 +528,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/receipts/:id", isAuthenticated, async (req, res) => {
     try {
-      await storage.deleteReceipt(req.params.id);
+      const receipt = await storage.getReceiptById(req.params.id);
+      if (!receipt) {
+        return res.status(404).json({ error: "Receipt not found" });
+      }
+
+      await storage.deleteReceipt(receipt.id);
+
+      try {
+        await fs.unlink(receipt.storagePath);
+      } catch (fileError) {
+        if ((fileError as NodeJS.ErrnoException).code !== 'ENOENT') {
+          console.error('Failed to delete receipt file:', fileError);
+        }
+      }
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete receipt" });

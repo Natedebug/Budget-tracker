@@ -1,6 +1,6 @@
 // Gmail service for scanning emails and downloading receipt attachments
 import { google } from 'googleapis';
-import * as fs from 'fs';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 
@@ -179,15 +179,13 @@ export async function downloadAttachment(attachment: EmailAttachment): Promise<s
 
   // Save to uploads/receipts directory
   const uploadsDir = 'uploads/receipts';
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
+  await fs.mkdir(uploadsDir, { recursive: true });
 
   const ext = path.extname(attachment.filename) || (attachment.mimeType === 'image/png' ? '.png' : '.jpg');
   const filename = `${randomUUID()}${ext}`;
   const filePath = path.join(uploadsDir, filename);
 
-  fs.writeFileSync(filePath, buffer);
+  await fs.writeFile(filePath, buffer);
 
   return filePath;
 }
