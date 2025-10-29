@@ -8,6 +8,15 @@ The application is built as a full-stack web application with a React-based fron
 
 ## Recent Changes
 
+**October 29, 2025**:
+- ✅ **OpenAI Integration Setup**: Configured Replit AI Integrations for receipt analysis
+  - Integrated Replit AI Integrations (OpenAI-compatible) - no API key required, billed to Replit credits
+  - Environment variables automatically configured: AI_INTEGRATIONS_OPENAI_BASE_URL, AI_INTEGRATIONS_OPENAI_API_KEY
+  - Receipt analyzer already using GPT-4o Vision via configured endpoints
+  - End-to-end testing confirmed: receipt upload → OpenAI analysis → data extraction working perfectly
+  - Fixed critical authentication bug: upsertUser now uses `id` (OIDC sub) as conflict target, explicitly updates only mutable fields (email, firstName, lastName, profileImageUrl)
+  - Authentication handles both new users and returning users without duplicate key violations
+
 **October 28, 2025**: 
 - ✅ **Replit Auth Integration**: Added complete authentication system
   - Implemented OIDC authentication with multiple login providers (Google, GitHub, email/password)
