@@ -15,24 +15,25 @@ import { FolderKanban, Plus, Calendar } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { parseNumericInput, isPositiveNumber, isNonNegativeNumber } from "@/lib/numberUtils";
 
 const formSchema = insertProjectSchema.extend({
-  totalBudget: z.string().min(1, "Total budget required").refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+  totalBudget: z.string().min(1, "Total budget required").refine(isPositiveNumber, {
     message: "Total budget must be a positive number",
   }),
-  laborBudget: z.string().min(1, "Labor budget required").refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+  laborBudget: z.string().min(1, "Labor budget required").refine(isNonNegativeNumber, {
     message: "Must be a non-negative number",
   }),
-  materialsBudget: z.string().min(1, "Materials budget required").refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+  materialsBudget: z.string().min(1, "Materials budget required").refine(isNonNegativeNumber, {
     message: "Must be a non-negative number",
   }),
-  equipmentBudget: z.string().min(1, "Equipment budget required").refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+  equipmentBudget: z.string().min(1, "Equipment budget required").refine(isNonNegativeNumber, {
     message: "Must be a non-negative number",
   }),
-  subcontractorsBudget: z.string().min(1, "Subcontractors budget required").refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+  subcontractorsBudget: z.string().min(1, "Subcontractors budget required").refine(isNonNegativeNumber, {
     message: "Must be a non-negative number",
   }),
-  overheadBudget: z.string().min(1, "Overhead budget required").refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+  overheadBudget: z.string().min(1, "Overhead budget required").refine(isNonNegativeNumber, {
     message: "Must be a non-negative number",
   }),
   startDate: z.string().min(1, "Start date required"),
@@ -71,12 +72,12 @@ export default function Projects({ onProjectSelect }: ProjectsProps) {
     mutationFn: (data: FormData) =>
       apiRequest("POST", "/api/projects", {
         ...data,
-        totalBudget: parseFloat(data.totalBudget),
-        laborBudget: parseFloat(data.laborBudget),
-        materialsBudget: parseFloat(data.materialsBudget),
-        equipmentBudget: parseFloat(data.equipmentBudget),
-        subcontractorsBudget: parseFloat(data.subcontractorsBudget),
-        overheadBudget: parseFloat(data.overheadBudget),
+        totalBudget: parseNumericInput(data.totalBudget),
+        laborBudget: parseNumericInput(data.laborBudget),
+        materialsBudget: parseNumericInput(data.materialsBudget),
+        equipmentBudget: parseNumericInput(data.equipmentBudget),
+        subcontractorsBudget: parseNumericInput(data.subcontractorsBudget),
+        overheadBudget: parseNumericInput(data.overheadBudget),
         endDate: data.endDate || null,
       }),
     onSuccess: (newProject: any) => {

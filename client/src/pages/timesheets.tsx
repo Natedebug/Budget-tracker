@@ -17,16 +17,17 @@ import { Clock, Plus, DollarSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { parseNumericInput, isPositiveNumber } from "@/lib/numberUtils";
 
 interface TimesheetsProps {
   projectId: string | null;
 }
 
 const formSchema = insertTimesheetSchema.extend({
-  hours: z.string().min(1, "Hours required").refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+  hours: z.string().min(1, "Hours required").refine(isPositiveNumber, {
     message: "Hours must be a positive number",
   }),
-  payRate: z.string().min(1, "Pay rate required").refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+  payRate: z.string().min(1, "Pay rate required").refine(isPositiveNumber, {
     message: "Pay rate must be a positive number",
   }),
   date: z.string().min(1, "Date required"),
@@ -70,8 +71,8 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
     mutationFn: (data: FormData) => 
       apiRequest("POST", "/api/timesheets", {
         ...data,
-        hours: parseFloat(data.hours),
-        payRate: parseFloat(data.payRate),
+        hours: parseNumericInput(data.hours),
+        payRate: parseNumericInput(data.payRate),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "timesheets"] });

@@ -16,19 +16,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ReceiptUploader } from "@/components/ReceiptUploader";
+import { parseNumericInput, isPositiveNumber, isNonNegativeNumber } from "@/lib/numberUtils";
 
 interface EquipmentProps {
   projectId: string | null;
 }
 
 const formSchema = insertEquipmentLogSchema.extend({
-  hours: z.string().min(1, "Hours required").refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+  hours: z.string().min(1, "Hours required").refine(isPositiveNumber, {
     message: "Hours must be a positive number",
   }),
-  fuelCost: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+  fuelCost: z.string().refine(isNonNegativeNumber, {
     message: "Fuel cost must be a non-negative number",
   }),
-  rentalCost: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+  rentalCost: z.string().refine(isNonNegativeNumber, {
     message: "Rental cost must be a non-negative number",
   }),
   date: z.string().min(1, "Date required"),
@@ -70,9 +71,9 @@ export default function Equipment({ projectId }: EquipmentProps) {
     mutationFn: async (data: FormData) => {
       const response = await apiRequest("POST", "/api/equipment", {
         ...data,
-        hours: parseFloat(data.hours),
-        fuelCost: parseFloat(data.fuelCost),
-        rentalCost: parseFloat(data.rentalCost),
+        hours: parseNumericInput(data.hours),
+        fuelCost: parseNumericInput(data.fuelCost),
+        rentalCost: parseNumericInput(data.rentalCost),
       });
       const log = await response.json();
       

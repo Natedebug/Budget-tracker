@@ -16,13 +16,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ReceiptUploader } from "@/components/ReceiptUploader";
+import { parseNumericInput, isPositiveNumber } from "@/lib/numberUtils";
 
 interface SubcontractorsProps {
   projectId: string | null;
 }
 
 const formSchema = insertSubcontractorEntrySchema.extend({
-  cost: z.string().min(1, "Cost required").refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+  cost: z.string().min(1, "Cost required").refine(isPositiveNumber, {
     message: "Cost must be a positive number",
   }),
   date: z.string().min(1, "Date required"),
@@ -61,7 +62,7 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
     mutationFn: async (data: FormData) => {
       const response = await apiRequest("POST", "/api/subcontractors", {
         ...data,
-        cost: parseFloat(data.cost),
+        cost: parseNumericInput(data.cost),
       });
       const entry = await response.json();
       
