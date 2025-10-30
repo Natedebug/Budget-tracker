@@ -185,7 +185,8 @@ export default function Projects({ onProjectSelect }: ProjectsProps) {
                         <FormControl>
                           <Input 
                             type="date" 
-                            {...field} 
+                            {...field}
+                            value={field.value || ""}
                             data-testid="input-end-date"
                           />
                         </FormControl>

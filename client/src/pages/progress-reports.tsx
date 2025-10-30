@@ -123,7 +123,7 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
       
       queryClient.setQueryData<ProgressReport[]>(
         ["/api/projects", projectId, "progress-reports"],
-        (old) => [optimisticReport as ProgressReport, ...(old || [])]
+        (old) => [optimisticReport as unknown as ProgressReport, ...(old || [])]
       );
       
       return { previousReports };
@@ -392,8 +392,8 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
                           </div>
                           <div className="mt-3">
                             <Select
-                              value={material.categoryId || "none"}
-                              onValueChange={(value) => updateMaterial(index, "categoryId", value === "none" ? undefined : value)}
+                              value={material.categoryId ?? "none"}
+                              onValueChange={(value) => updateMaterial(index, "categoryId", value === "none" ? "" : value)}
                             >
                               <SelectTrigger data-testid={`select-material-category-${index}`}>
                                 <SelectValue placeholder="Select category (optional)" />
