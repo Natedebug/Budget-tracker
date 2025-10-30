@@ -14,6 +14,7 @@ import {
   insertReceiptLinkSchema,
   insertEmployeeSchema,
   insertGmailConnectionSchema,
+  insertCategorySchema,
 } from "@shared/schema";
 import { promises as fs } from "fs";
 import multer from "multer";
@@ -606,6 +607,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete employee" });
+    }
+  });
+
+  // Categories
+  app.get("/api/projects/:projectId/categories", isAuthenticated, async (req, res) => {
+    try {
+      const categories = await storage.getProjectCategories(req.params.projectId);
+      res.json(categories);
+    } catch (error) {
+      console.error('Categories fetch error:', error);
+      res.status(500).json({ error: "Failed to fetch categories" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/categories", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertCategorySchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+      });
+      const category = await storage.createCategory(data);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error('Category creation error:', error);
+      res.status(400).json({ error: "Invalid category data" });
+    }
+  });
+
+  app.patch("/api/categories/:id", isAuthenticated, async (req, res) => {
+    try {
+      const category = await storage.updateCategory(req.params.id, req.body);
+      res.json(category);
+    } catch (error) {
+      console.error('Category update error:', error);
+      res.status(400).json({ error: "Failed to update category" });
+    }
+  });
+
+  app.delete("/api/categories/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteCategory(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete category" });
     }
   });
 

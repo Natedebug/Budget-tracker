@@ -12,6 +12,7 @@ import {
   receiptLinks,
   employees,
   gmailConnection,
+  categories,
   type Project, 
   type InsertProject,
   type Timesheet,
@@ -36,6 +37,8 @@ import {
   type InsertEmployee,
   type GmailConnection,
   type InsertGmailConnection,
+  type Category,
+  type InsertCategory,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -97,6 +100,13 @@ export interface IStorage {
   createGmailConnection(connection: InsertGmailConnection): Promise<GmailConnection>;
   updateGmailConnection(id: string, connection: Partial<InsertGmailConnection>): Promise<GmailConnection>;
   deleteGmailConnection(id: string): Promise<void>;
+
+  // Categories
+  getProjectCategories(projectId: string): Promise<Category[]>;
+  getCategory(id: string): Promise<Category | undefined>;
+  createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: string, category: Partial<InsertCategory>): Promise<Category>;
+  deleteCategory(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -459,6 +469,46 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(gmailConnection.id, id));
+  }
+
+  // Categories
+  async getProjectCategories(projectId: string): Promise<Category[]> {
+    return await db
+      .select()
+      .from(categories)
+      .where(eq(categories.projectId, projectId))
+      .orderBy(categories.name);
+  }
+
+  async getCategory(id: string): Promise<Category | undefined> {
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.id, id));
+    return category || undefined;
+  }
+
+  async createCategory(category: InsertCategory): Promise<Category> {
+    const [newCategory] = await db
+      .insert(categories)
+      .values(category)
+      .returning();
+    return newCategory;
+  }
+
+  async updateCategory(id: string, updateData: Partial<InsertCategory>): Promise<Category> {
+    const [category] = await db
+      .update(categories)
+      .set(updateData)
+      .where(eq(categories.id, id))
+      .returning();
+    return category;
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    await db
+      .delete(categories)
+      .where(eq(categories.id, id));
   }
 }
 
