@@ -107,6 +107,7 @@ export default function Equipment({ projectId }: EquipmentProps) {
       const optimisticLog = {
         id: `temp-${Date.now()}`,
         projectId: newLog.projectId,
+        categoryId: newLog.categoryId || null,
         equipmentName: newLog.equipmentName,
         hours: newLog.hours,
         fuelCost: newLog.fuelCost,
@@ -118,7 +119,7 @@ export default function Equipment({ projectId }: EquipmentProps) {
       
       queryClient.setQueryData<EquipmentLog[]>(
         ["/api/projects", projectId, "equipment"],
-        (old) => [optimisticLog as EquipmentLog, ...(old || [])]
+        (old) => [optimisticLog as unknown as EquipmentLog, ...(old || [])]
       );
       
       return { previousLogs };

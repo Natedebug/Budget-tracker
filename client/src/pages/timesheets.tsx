@@ -91,6 +91,7 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
       const optimisticTimesheet = {
         id: `temp-${Date.now()}`,
         projectId: newTimesheet.projectId,
+        categoryId: newTimesheet.categoryId || null,
         employeeName: newTimesheet.employeeName,
         hours: newTimesheet.hours,
         payRate: newTimesheet.payRate,
@@ -101,7 +102,7 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
       
       queryClient.setQueryData<Timesheet[]>(
         ["/api/projects", projectId, "timesheets"],
-        (old) => [optimisticTimesheet as Timesheet, ...(old || [])]
+        (old) => [optimisticTimesheet as unknown as Timesheet, ...(old || [])]
       );
       
       return { previousTimesheets };

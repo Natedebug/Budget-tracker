@@ -94,6 +94,7 @@ export default function Overhead({ projectId }: OverheadProps) {
       const optimisticEntry = {
         id: `temp-${Date.now()}`,
         projectId: newEntry.projectId,
+        categoryId: newEntry.categoryId || null,
         description: newEntry.description,
         cost: newEntry.cost,
         date: newEntry.date,
@@ -102,7 +103,7 @@ export default function Overhead({ projectId }: OverheadProps) {
       
       queryClient.setQueryData<OverheadEntry[]>(
         ["/api/projects", projectId, "overhead"],
-        (old) => [optimisticEntry as OverheadEntry, ...(old || [])]
+        (old) => [optimisticEntry as unknown as OverheadEntry, ...(old || [])]
       );
       
       return { previousEntries };

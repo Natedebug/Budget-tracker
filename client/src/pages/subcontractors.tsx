@@ -96,6 +96,7 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
       const optimisticEntry = {
         id: `temp-${Date.now()}`,
         projectId: newEntry.projectId,
+        categoryId: newEntry.categoryId || null,
         contractorName: newEntry.contractorName,
         cost: newEntry.cost,
         date: newEntry.date,
@@ -105,7 +106,7 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
       
       queryClient.setQueryData<SubcontractorEntry[]>(
         ["/api/projects", projectId, "subcontractors"],
-        (old) => [optimisticEntry as SubcontractorEntry, ...(old || [])]
+        (old) => [optimisticEntry as unknown as SubcontractorEntry, ...(old || [])]
       );
       
       return { previousEntries };
