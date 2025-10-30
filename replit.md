@@ -2,7 +2,7 @@
 
 ## Overview
 
-BudgetSync Field is a construction project budget tracking application for field superintendents and project managers. It automates daily cost calculations from various inputs (timesheets, progress reports, equipment logs, materials, subcontractors, overhead) to provide real-time visibility into budget burn rates, remaining funds, and project completion projections. The application is a full-stack web application with a React frontend and Express backend, featuring offline capability considerations and a mobile-first, field-ready design. It also includes AI-powered receipt analysis using OpenAI GPT-4o Vision for automatic data extraction.
+BudgetSync Field is a construction project budget tracking application for field superintendents and project managers. It automates daily cost calculations from various inputs (timesheets, progress reports, equipment logs, materials, subcontractors, overhead) to provide real-time visibility into budget burn rates, remaining funds, and project completion projections. The application is a full-stack web application with a React frontend and Express backend, featuring offline capability considerations and a mobile-first, field-ready design. It also includes AI-powered receipt analysis using OpenAI GPT-4o Vision for automatic data extraction and change order management for tracking budget adjustments.
 
 ## User Preferences
 
@@ -34,13 +34,14 @@ The application uses Shadcn/ui components built on Radix UI with Tailwind CSS, f
 - **Employee Management**: CRUD operations for employee tracking with pay rates.
 - **Gmail Integration**: Single company inbox architecture for receipt processing, using PostgreSQL advisory locks for connection serialization.
 - **Budget Categories**: User-defined categories for organizing costs within projects. Categories are optional and project-scoped, with hex color coding for visual differentiation in the dashboard breakdown.
+- **Change Order Management**: Track budget adjustments through change orders with three statuses (Pending, Approved, Rejected). Only approved change orders automatically adjust the project's total budget. Dashboard displays both original budget and adjusted budget (original + approved change orders) for complete financial visibility.
 
 **Monorepo Structure**: Frontend (`client/`), backend (`server/`), and shared code (`shared/`) ensure type consistency using TypeScript and shared Zod schemas.
 
 ### System Design Choices
 
 **Data Storage**: PostgreSQL (Neon serverless platform) with Drizzle ORM for type-safe queries and schema management.
-- **Schema**: Includes `Projects`, `Timesheets`, `Progress Reports`, `Materials`, `Equipment Logs`, `Subcontractor Entries`, `Overhead Entries`, `Receipts`, `Receipt Links`, `Employees`, `Categories`, `Users`, `Sessions`, and `Gmail Connection` tables. All use UUID primary keys and timestamps. Cost entries (timesheets, equipment, subcontractors, overhead, materials) have optional foreign key references to Categories for budget organization.
+- **Schema**: Includes `Projects`, `Timesheets`, `Progress Reports`, `Materials`, `Equipment Logs`, `Subcontractor Entries`, `Overhead Entries`, `Receipts`, `Receipt Links`, `Employees`, `Categories`, `Change Orders`, `Users`, `Sessions`, and `Gmail Connection` tables. All use UUID primary keys and timestamps. Cost entries (timesheets, equipment, subcontractors, overhead, materials) have optional foreign key references to Categories for budget organization.
 - **Connection Pooling**: Neon serverless connection pooling with WebSocket support.
 
 **Build Strategy**: Vite for client (to `dist/public`), esbuild for server (to `dist/`).
