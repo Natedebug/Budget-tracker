@@ -73,10 +73,20 @@ export const projects = pgTable("projects", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Categories table for organizing costs within projects
+export const categories = pgTable("categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  color: text("color"), // Hex color for visual identification
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Timesheets table
 export const timesheets = pgTable("timesheets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  categoryId: varchar("category_id").references(() => categories.id, { onDelete: "set null" }),
   employeeName: text("employee_name").notNull(),
   hours: decimal("hours", { precision: 5, scale: 2 }).notNull(),
   payRate: decimal("pay_rate", { precision: 8, scale: 2 }).notNull(),
@@ -100,6 +110,7 @@ export const progressReports = pgTable("progress_reports", {
 export const materials = pgTable("materials", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   progressReportId: varchar("progress_report_id").notNull().references(() => progressReports.id, { onDelete: "cascade" }),
+  categoryId: varchar("category_id").references(() => categories.id, { onDelete: "set null" }),
   itemName: text("item_name").notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   unit: text("unit").notNull(),
@@ -111,6 +122,7 @@ export const materials = pgTable("materials", {
 export const equipmentLogs = pgTable("equipment_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  categoryId: varchar("category_id").references(() => categories.id, { onDelete: "set null" }),
   equipmentName: text("equipment_name").notNull(),
   hours: decimal("hours", { precision: 6, scale: 2 }).notNull(),
   fuelCost: decimal("fuel_cost", { precision: 8, scale: 2 }).notNull().default("0"),
@@ -124,6 +136,7 @@ export const equipmentLogs = pgTable("equipment_logs", {
 export const subcontractorEntries = pgTable("subcontractor_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  categoryId: varchar("category_id").references(() => categories.id, { onDelete: "set null" }),
   contractorName: text("contractor_name").notNull(),
   cost: decimal("cost", { precision: 10, scale: 2 }).notNull(),
   date: date("date").notNull(),
@@ -135,6 +148,7 @@ export const subcontractorEntries = pgTable("subcontractor_entries", {
 export const overheadEntries = pgTable("overhead_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  categoryId: varchar("category_id").references(() => categories.id, { onDelete: "set null" }),
   description: text("description").notNull(),
   cost: decimal("cost", { precision: 10, scale: 2 }).notNull(),
   date: date("date").notNull(),
@@ -325,6 +339,11 @@ export const insertGmailConnectionSchema = createInsertSchema(gmailConnection).o
   updatedAt: true,
 });
 
+export const insertCategorySchema = createInsertSchema(categories).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
@@ -358,6 +377,9 @@ export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 
 export type GmailConnection = typeof gmailConnection.$inferSelect;
 export type InsertGmailConnection = z.infer<typeof insertGmailConnectionSchema>;
+
+export type Category = typeof categories.$inferSelect;
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
 
 // Replit Auth - User types
 export type UpsertUser = typeof users.$inferInsert;
