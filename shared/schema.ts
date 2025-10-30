@@ -270,20 +270,20 @@ export const gmailConnectionRelations = relations(gmailConnection, ({ one }) => 
 
 // Insert schemas with coercion for numeric fields
 export const insertProjectSchema = createInsertSchema(projects, {
-  totalBudget: z.coerce.number().positive(),
-  laborBudget: z.coerce.number().nonnegative(),
-  materialsBudget: z.coerce.number().nonnegative(),
-  equipmentBudget: z.coerce.number().nonnegative(),
-  subcontractorsBudget: z.coerce.number().nonnegative(),
-  overheadBudget: z.coerce.number().nonnegative(),
+  totalBudget: z.coerce.number().positive().transform(String),
+  laborBudget: z.coerce.number().nonnegative().transform(String),
+  materialsBudget: z.coerce.number().nonnegative().transform(String),
+  equipmentBudget: z.coerce.number().nonnegative().transform(String),
+  subcontractorsBudget: z.coerce.number().nonnegative().transform(String),
+  overheadBudget: z.coerce.number().nonnegative().transform(String),
 }).omit({
   id: true,
   createdAt: true,
 });
 
 export const insertTimesheetSchema = createInsertSchema(timesheets, {
-  hours: z.coerce.number().positive(),
-  payRate: z.coerce.number().positive(),
+  hours: z.coerce.number().positive().transform(String),
+  payRate: z.coerce.number().positive().transform(String),
 }).omit({
   id: true,
   createdAt: true,
@@ -297,30 +297,30 @@ export const insertProgressReportSchema = createInsertSchema(progressReports, {
 });
 
 export const insertMaterialSchema = createInsertSchema(materials, {
-  quantity: z.coerce.number().positive(),
-  cost: z.coerce.number().nonnegative(),
+  quantity: z.coerce.number().positive().transform(String),
+  cost: z.coerce.number().nonnegative().transform(String),
 }).omit({
   id: true,
 });
 
 export const insertEquipmentLogSchema = createInsertSchema(equipmentLogs, {
-  hours: z.coerce.number().positive(),
-  fuelCost: z.coerce.number().nonnegative(),
-  rentalCost: z.coerce.number().nonnegative(),
+  hours: z.coerce.number().positive().transform(String),
+  fuelCost: z.coerce.number().nonnegative().transform(String),
+  rentalCost: z.coerce.number().nonnegative().transform(String),
 }).omit({
   id: true,
   createdAt: true,
 });
 
 export const insertSubcontractorEntrySchema = createInsertSchema(subcontractorEntries, {
-  cost: z.coerce.number().positive(),
+  cost: z.coerce.number().positive().transform(String),
 }).omit({
   id: true,
   createdAt: true,
 });
 
 export const insertOverheadEntrySchema = createInsertSchema(overheadEntries, {
-  cost: z.coerce.number().positive(),
+  cost: z.coerce.number().positive().transform(String),
 }).omit({
   id: true,
   createdAt: true,
@@ -339,7 +339,7 @@ export const insertReceiptLinkSchema = createInsertSchema(receiptLinks).omit({
 });
 
 export const insertEmployeeSchema = createInsertSchema(employees, {
-  payRate: z.coerce.number().positive(),
+  payRate: z.coerce.number().positive().transform(String),
 }).omit({
   id: true,
   createdAt: true,
@@ -356,7 +356,9 @@ export const insertCategorySchema = createInsertSchema(categories).omit({
   createdAt: true,
 });
 
-export const insertChangeOrderSchema = createInsertSchema(changeOrders).omit({
+export const insertChangeOrderSchema = createInsertSchema(changeOrders, {
+  amount: z.coerce.number().positive().transform(String),
+}).omit({
   id: true,
   createdAt: true,
 });
