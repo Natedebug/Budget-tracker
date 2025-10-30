@@ -78,6 +78,37 @@ export default function Overhead({ projectId }: OverheadProps) {
       
       return entry;
     },
+    onMutate: async (newEntry) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/projects", projectId, "overhead"] });
+      
+      const previousEntries = queryClient.getQueryData<OverheadEntry[]>(["/api/projects", projectId, "overhead"]);
+      
+      const optimisticEntry: OverheadEntry = {
+        id: `temp-${Date.now()}`,
+        projectId: newEntry.projectId,
+        description: newEntry.description,
+        cost: newEntry.cost,
+        date: new Date(newEntry.date),
+        createdAt: new Date(),
+      };
+      
+      queryClient.setQueryData<OverheadEntry[]>(
+        ["/api/projects", projectId, "overhead"],
+        (old) => [optimisticEntry, ...(old || [])]
+      );
+      
+      return { previousEntries };
+    },
+    onError: (err, newEntry, context) => {
+      if (context?.previousEntries) {
+        queryClient.setQueryData(["/api/projects", projectId, "overhead"], context.previousEntries);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to create overhead entry",
+        variant: "destructive",
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "overhead"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "stats"] });
@@ -93,13 +124,6 @@ export default function Overhead({ projectId }: OverheadProps) {
       });
       setUploadedReceiptId(null);
       setShowForm(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create overhead entry",
-        variant: "destructive",
-      });
     },
   });
 

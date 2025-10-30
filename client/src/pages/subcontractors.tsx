@@ -80,6 +80,38 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
       
       return entry;
     },
+    onMutate: async (newEntry) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/projects", projectId, "subcontractors"] });
+      
+      const previousEntries = queryClient.getQueryData<SubcontractorEntry[]>(["/api/projects", projectId, "subcontractors"]);
+      
+      const optimisticEntry: SubcontractorEntry = {
+        id: `temp-${Date.now()}`,
+        projectId: newEntry.projectId,
+        contractorName: newEntry.contractorName,
+        cost: newEntry.cost,
+        date: new Date(newEntry.date),
+        description: newEntry.description || null,
+        createdAt: new Date(),
+      };
+      
+      queryClient.setQueryData<SubcontractorEntry[]>(
+        ["/api/projects", projectId, "subcontractors"],
+        (old) => [optimisticEntry, ...(old || [])]
+      );
+      
+      return { previousEntries };
+    },
+    onError: (err, newEntry, context) => {
+      if (context?.previousEntries) {
+        queryClient.setQueryData(["/api/projects", projectId, "subcontractors"], context.previousEntries);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to create subcontractor entry",
+        variant: "destructive",
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "subcontractors"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "stats"] });
@@ -96,13 +128,6 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
       });
       setUploadedReceiptId(null);
       setShowForm(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create subcontractor entry",
-        variant: "destructive",
-      });
     },
   });
 

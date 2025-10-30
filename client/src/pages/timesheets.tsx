@@ -87,9 +87,9 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
         employeeName: newTimesheet.employeeName,
         hours: newTimesheet.hours,
         payRate: newTimesheet.payRate,
-        date: newTimesheet.date,
+        date: new Date(newTimesheet.date),
         notes: newTimesheet.notes || null,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(),
       };
       
       queryClient.setQueryData<Timesheet[]>(
@@ -296,7 +296,8 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
                         <Textarea 
                           placeholder="Additional notes about this timesheet entry..."
                           className="min-h-20"
-                          {...field} 
+                          {...field}
+                          value={field.value || ""}
                           data-testid="input-notes"
                         />
                       </FormControl>

@@ -91,6 +91,40 @@ export default function Equipment({ projectId }: EquipmentProps) {
       
       return log;
     },
+    onMutate: async (newLog) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/projects", projectId, "equipment"] });
+      
+      const previousLogs = queryClient.getQueryData<EquipmentLog[]>(["/api/projects", projectId, "equipment"]);
+      
+      const optimisticLog: EquipmentLog = {
+        id: `temp-${Date.now()}`,
+        projectId: newLog.projectId,
+        equipmentName: newLog.equipmentName,
+        hours: newLog.hours,
+        fuelCost: newLog.fuelCost,
+        rentalCost: newLog.rentalCost,
+        date: new Date(newLog.date),
+        notes: newLog.notes || null,
+        createdAt: new Date(),
+      };
+      
+      queryClient.setQueryData<EquipmentLog[]>(
+        ["/api/projects", projectId, "equipment"],
+        (old) => [optimisticLog, ...(old || [])]
+      );
+      
+      return { previousLogs };
+    },
+    onError: (err, newLog, context) => {
+      if (context?.previousLogs) {
+        queryClient.setQueryData(["/api/projects", projectId, "equipment"], context.previousLogs);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to save equipment log. Please try again.",
+        variant: "destructive",
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "equipment"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "stats"] });
@@ -109,13 +143,6 @@ export default function Equipment({ projectId }: EquipmentProps) {
       });
       setUploadedReceiptId(null);
       setShowForm(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to save equipment log. Please try again.",
-        variant: "destructive",
-      });
     },
   });
 
