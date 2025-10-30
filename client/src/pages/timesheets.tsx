@@ -68,12 +68,47 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
   }, [projectId, form]);
 
   const createMutation = useMutation({
-    mutationFn: (data: FormData) => 
-      apiRequest("POST", "/api/timesheets", {
+    mutationFn: async (data: FormData) => {
+      const response = await apiRequest("POST", "/api/timesheets", {
         ...data,
         hours: parseNumericInput(data.hours),
         payRate: parseNumericInput(data.payRate),
-      }),
+      });
+      return response.json();
+    },
+    onMutate: async (newTimesheet) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/projects", projectId, "timesheets"] });
+      
+      const previousTimesheets = queryClient.getQueryData<Timesheet[]>(["/api/projects", projectId, "timesheets"]);
+      
+      const optimisticTimesheet: Timesheet = {
+        id: `temp-${Date.now()}`,
+        projectId: newTimesheet.projectId,
+        employeeName: newTimesheet.employeeName,
+        hours: newTimesheet.hours,
+        payRate: newTimesheet.payRate,
+        date: newTimesheet.date,
+        notes: newTimesheet.notes || null,
+        createdAt: new Date().toISOString(),
+      };
+      
+      queryClient.setQueryData<Timesheet[]>(
+        ["/api/projects", projectId, "timesheets"],
+        (old) => [optimisticTimesheet, ...(old || [])]
+      );
+      
+      return { previousTimesheets };
+    },
+    onError: (err, newTimesheet, context) => {
+      if (context?.previousTimesheets) {
+        queryClient.setQueryData(["/api/projects", projectId, "timesheets"], context.previousTimesheets);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to save timesheet. Please try again.",
+        variant: "destructive",
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "timesheets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "stats"] });
@@ -90,13 +125,6 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
         notes: "",
       });
       setShowForm(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to save timesheet. Please try again.",
-        variant: "destructive",
-      });
     },
   });
 
