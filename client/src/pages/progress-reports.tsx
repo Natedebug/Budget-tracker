@@ -9,8 +9,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertProgressReportSchema, type ProgressReport, type Receipt } from "@shared/schema";
+import { insertProgressReportSchema, type ProgressReport, type Receipt, type Category } from "@shared/schema";
 import { TrendingUp, Plus, Trash2, Package } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -26,6 +27,7 @@ const materialSchema = z.object({
   quantity: z.string().min(1, "Quantity required"),
   unit: z.string().min(1, "Unit required"),
   cost: z.string().min(1, "Cost required"),
+  categoryId: z.string().optional(),
 });
 
 const formSchema = insertProgressReportSchema.extend({
@@ -50,6 +52,11 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
 
   const { data: reports, isLoading } = useQuery<ProgressReport[]>({
     queryKey: ["/api/projects", projectId, "progress-reports"],
+    enabled: !!projectId,
+  });
+
+  const { data: categories } = useQuery<Category[]>({
+    queryKey: ["/api/projects", projectId, "categories"],
     enabled: !!projectId,
   });
 
@@ -150,7 +157,7 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
   };
 
   const addMaterial = () => {
-    setMaterials([...materials, { itemName: "", quantity: "", unit: "", cost: "" }]);
+    setMaterials([...materials, { itemName: "", quantity: "", unit: "", cost: "", categoryId: undefined }]);
   };
 
   const removeMaterial = (index: number) => {
@@ -377,6 +384,30 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
                                 <Trash2 className="w-4 h-4 text-destructive" />
                               </Button>
                             </div>
+                          </div>
+                          <div className="mt-3">
+                            <Select
+                              value={material.categoryId || "none"}
+                              onValueChange={(value) => updateMaterial(index, "categoryId", value === "none" ? undefined : value)}
+                            >
+                              <SelectTrigger data-testid={`select-material-category-${index}`}>
+                                <SelectValue placeholder="Select category (optional)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">No Category</SelectItem>
+                                {categories?.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-3 h-3 rounded-sm"
+                                        style={{ backgroundColor: category.color || "#3b82f6" }}
+                                      />
+                                      {category.name}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </Card>
                       ))}

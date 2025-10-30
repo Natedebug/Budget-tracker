@@ -9,8 +9,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertEquipmentLogSchema, type EquipmentLog, type Receipt } from "@shared/schema";
+import { insertEquipmentLogSchema, type EquipmentLog, type Receipt, type Category } from "@shared/schema";
 import { Truck, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,11 @@ export default function Equipment({ projectId }: EquipmentProps) {
     enabled: !!projectId,
   });
 
+  const { data: categories } = useQuery<Category[]>({
+    queryKey: ["/api/projects", projectId, "categories"],
+    enabled: !!projectId,
+  });
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -57,6 +63,7 @@ export default function Equipment({ projectId }: EquipmentProps) {
       rentalCost: "0",
       date: format(new Date(), "yyyy-MM-dd"),
       notes: "",
+      categoryId: undefined,
     },
   });
 
@@ -140,6 +147,7 @@ export default function Equipment({ projectId }: EquipmentProps) {
         rentalCost: "0",
         date: format(new Date(), "yyyy-MM-dd"),
         notes: "",
+        categoryId: undefined,
       });
       setUploadedReceiptId(null);
       setShowForm(false);
@@ -263,6 +271,41 @@ export default function Equipment({ projectId }: EquipmentProps) {
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category (Optional)</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(value === "none" ? undefined : value)}
+                        value={field.value || "none"}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-category">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none" data-testid="select-category-none">No Category</SelectItem>
+                          {categories?.map((category) => (
+                            <SelectItem key={category.id} value={category.id} data-testid={`select-category-${category.id}`}>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-sm"
+                                  style={{ backgroundColor: category.color || "#3b82f6" }}
+                                />
+                                {category.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
