@@ -15,6 +15,7 @@ import {
   insertEmployeeSchema,
   insertGmailConnectionSchema,
   insertCategorySchema,
+  insertChangeOrderSchema,
 } from "@shared/schema";
 import { promises as fs } from "fs";
 import multer from "multer";
@@ -109,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Project not found" });
       }
 
-      const [timesheetData, equipmentData, subcontractorData, overheadData, progressData, categories, allMaterials] = await Promise.all([
+      const [timesheetData, equipmentData, subcontractorData, overheadData, progressData, categories, allMaterials, changeOrders] = await Promise.all([
         storage.getProjectTimesheets(projectId),
         storage.getProjectEquipmentLogs(projectId),
         storage.getProjectSubcontractorEntries(projectId),
@@ -117,6 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getProjectProgressReports(projectId),
         storage.getProjectCategories(projectId),
         storage.getProjectMaterials(projectId),
+        storage.getProjectChangeOrders(projectId),
       ]);
 
       // Calculate labor costs
@@ -254,12 +256,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sort by total descending
       categoryBreakdown.sort((a, b) => b.total - a.total);
 
+      // Calculate change order totals
+      const approvedChangeOrdersTotal = changeOrders
+        .filter(co => co.status === "Approved")
+        .reduce((sum, co) => sum + parseFloat(co.amount), 0);
+
+      const originalBudget = totalBudget;
+      const adjustedTotalBudget = originalBudget + approvedChangeOrdersTotal;
+      const adjustedRemaining = adjustedTotalBudget - totalSpent;
+
       res.json({
-        totalBudget,
+        totalBudget: adjustedTotalBudget, // This is now the adjusted total
+        originalBudget, // Original budget before change orders
+        approvedChangeOrdersTotal, // Total of all approved change orders
         totalSpent,
         spentToday,
-        remaining,
-        percentUsed,
+        remaining: adjustedRemaining, // Remaining based on adjusted budget
+        percentUsed: (totalSpent / adjustedTotalBudget) * 100,
         percentComplete: latestProgress,
         laborSpent,
         materialsSpent,
@@ -727,6 +740,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete category" });
+    }
+  });
+
+  // Change Orders
+  app.get("/api/projects/:projectId/change-orders", isAuthenticated, async (req, res) => {
+    try {
+      const changeOrders = await storage.getProjectChangeOrders(req.params.projectId);
+      res.json(changeOrders);
+    } catch (error) {
+      console.error('Change orders fetch error:', error);
+      res.status(500).json({ error: "Failed to fetch change orders" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/change-orders", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertChangeOrderSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+      });
+      const changeOrder = await storage.createChangeOrder(data);
+      res.status(201).json(changeOrder);
+    } catch (error) {
+      console.error('Change order creation error:', error);
+      res.status(400).json({ error: "Invalid change order data" });
+    }
+  });
+
+  app.patch("/api/change-orders/:id", isAuthenticated, async (req, res) => {
+    try {
+      const existing = await storage.getChangeOrder(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Change order not found" });
+      }
+      
+      // Validate payload and exclude projectId to prevent cross-project reassignment
+      const updateData = insertChangeOrderSchema
+        .partial()
+        .omit({ projectId: true })
+        .parse(req.body);
+      
+      const changeOrder = await storage.updateChangeOrder(req.params.id, updateData);
+      if (!changeOrder) {
+        return res.status(500).json({ error: "Failed to update change order" });
+      }
+      
+      res.json(changeOrder);
+    } catch (error) {
+      console.error('Change order update error:', error);
+      res.status(400).json({ error: "Invalid change order data" });
+    }
+  });
+
+  app.delete("/api/change-orders/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteChangeOrder(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete change order" });
     }
   });
 

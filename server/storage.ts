@@ -13,6 +13,7 @@ import {
   employees,
   gmailConnection,
   categories,
+  changeOrders,
   type Project, 
   type InsertProject,
   type Timesheet,
@@ -39,6 +40,8 @@ import {
   type InsertGmailConnection,
   type Category,
   type InsertCategory,
+  type ChangeOrder,
+  type InsertChangeOrder,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -107,6 +110,13 @@ export interface IStorage {
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: string, category: Partial<InsertCategory>): Promise<Category>;
   deleteCategory(id: string): Promise<void>;
+
+  // Change Orders
+  getProjectChangeOrders(projectId: string): Promise<ChangeOrder[]>;
+  getChangeOrder(id: string): Promise<ChangeOrder | undefined>;
+  createChangeOrder(changeOrder: InsertChangeOrder): Promise<ChangeOrder>;
+  updateChangeOrder(id: string, changeOrder: Partial<InsertChangeOrder>): Promise<ChangeOrder>;
+  deleteChangeOrder(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -509,6 +519,46 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(categories)
       .where(eq(categories.id, id));
+  }
+
+  // Change Orders
+  async getProjectChangeOrders(projectId: string): Promise<ChangeOrder[]> {
+    return await db
+      .select()
+      .from(changeOrders)
+      .where(eq(changeOrders.projectId, projectId))
+      .orderBy(desc(changeOrders.date));
+  }
+
+  async getChangeOrder(id: string): Promise<ChangeOrder | undefined> {
+    const [changeOrder] = await db
+      .select()
+      .from(changeOrders)
+      .where(eq(changeOrders.id, id));
+    return changeOrder || undefined;
+  }
+
+  async createChangeOrder(changeOrder: InsertChangeOrder): Promise<ChangeOrder> {
+    const [newChangeOrder] = await db
+      .insert(changeOrders)
+      .values(changeOrder)
+      .returning();
+    return newChangeOrder;
+  }
+
+  async updateChangeOrder(id: string, updateData: Partial<InsertChangeOrder>): Promise<ChangeOrder> {
+    const [changeOrder] = await db
+      .update(changeOrders)
+      .set(updateData)
+      .where(eq(changeOrders.id, id))
+      .returning();
+    return changeOrder;
+  }
+
+  async deleteChangeOrder(id: string): Promise<void> {
+    await db
+      .delete(changeOrders)
+      .where(eq(changeOrders.id, id));
   }
 }
 

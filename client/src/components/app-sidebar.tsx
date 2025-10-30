@@ -1,4 +1,4 @@
-import { LayoutDashboard, Clock, TrendingUp, Truck, Users, Briefcase, FolderKanban, Download, UserCog, Mail, Tag } from "lucide-react";
+import { LayoutDashboard, Clock, TrendingUp, Truck, Users, Briefcase, FolderKanban, Download, UserCog, Mail, Tag, FileText } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -60,6 +60,11 @@ const menuItems = [
     title: "Categories",
     url: "/categories",
     icon: Tag,
+  },
+  {
+    title: "Change Orders",
+    url: "/change-orders",
+    icon: FileText,
   },
   {
     title: "Employees",

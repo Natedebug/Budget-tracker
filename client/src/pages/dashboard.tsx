@@ -15,7 +15,9 @@ interface CategoryBreakdownItem {
 }
 
 interface BudgetStats {
-  totalBudget: number;
+  totalBudget: number; // Adjusted total (original + approved COs)
+  originalBudget: number; // Original budget before change orders
+  approvedChangeOrdersTotal: number; // Total of approved change orders
   totalSpent: number;
   spentToday: number;
   remaining: number;
@@ -141,6 +143,14 @@ export default function Dashboard({ projectId }: DashboardProps) {
             <p className="text-2xl md:text-3xl font-mono font-bold text-foreground" data-testid="text-total-budget">
               {formatCurrency(stats.totalBudget)}
             </p>
+            {stats.approvedChangeOrdersTotal > 0 && (
+              <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                <div data-testid="text-original-budget">Original: {formatCurrency(stats.originalBudget)}</div>
+                <div className="text-green-600 dark:text-green-400" data-testid="text-change-orders">
+                  +{formatCurrency(stats.approvedChangeOrdersTotal)} COs
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <p className="text-sm text-muted-foreground mb-1">Spent Today</p>
@@ -294,10 +304,10 @@ export default function Dashboard({ projectId }: DashboardProps) {
                   testId={`user-category-${category.categoryId}`}
                 />
               ))}
-              {stats.uncategorizedTotal > 0 && (
+              {(stats.uncategorizedTotal || 0) > 0 && (
                 <CategoryItem
                   label="Uncategorized"
-                  spent={stats.uncategorizedTotal}
+                  spent={stats.uncategorizedTotal || 0}
                   color="bg-muted"
                   testId="user-category-uncategorized"
                 />

@@ -19,6 +19,7 @@ import Overhead from "@/pages/overhead";
 import Projects from "@/pages/projects";
 import Employees from "@/pages/employees";
 import Categories from "@/pages/categories";
+import ChangeOrders from "@/pages/change-orders";
 import GmailConnection from "@/pages/gmail-connection";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
@@ -35,6 +36,7 @@ function Router({ projectId, onProjectSelect }: { projectId: string | null; onPr
       <Route path="/subcontractors" component={() => <Subcontractors projectId={projectId} />} />
       <Route path="/overhead" component={() => <Overhead projectId={projectId} />} />
       <Route path="/categories" component={() => <Categories projectId={projectId} />} />
+      <Route path="/change-orders" component={() => <ChangeOrders projectId={projectId} />} />
       <Route path="/projects" component={() => <Projects onProjectSelect={onProjectSelect} />} />
       <Route path="/employees" component={Employees} />
       <Route path="/gmail-connection" component={() => <GmailConnection projectId={projectId} />} />
