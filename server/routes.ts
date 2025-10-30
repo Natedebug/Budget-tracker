@@ -109,12 +109,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Project not found" });
       }
 
-      const [timesheetData, equipmentData, subcontractorData, overheadData, progressData] = await Promise.all([
+      const [timesheetData, equipmentData, subcontractorData, overheadData, progressData, categories, allMaterials] = await Promise.all([
         storage.getProjectTimesheets(projectId),
         storage.getProjectEquipmentLogs(projectId),
         storage.getProjectSubcontractorEntries(projectId),
         storage.getProjectOverheadEntries(projectId),
         storage.getProjectProgressReports(projectId),
+        storage.getProjectCategories(projectId),
+        storage.getProjectMaterials(projectId),
       ]);
 
       // Calculate labor costs
@@ -138,7 +140,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }, 0);
 
       // Calculate materials costs from all progress reports
-      const allMaterials = await storage.getProjectMaterials(projectId);
       const materialsSpent = allMaterials.reduce((sum, material) => {
         return sum + parseFloat(material.cost);
       }, 0);
@@ -180,6 +181,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
         daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
       }
 
+      // Calculate breakdown by user-defined categories
+      const categoryBreakdown: Array<{ categoryId: string; categoryName: string; categoryColor: string | null; total: number }> = [];
+      let uncategorizedTotal = 0;
+
+      // Build a map to track totals per category
+      const categoryTotals = new Map<string, number>();
+      
+      // Track timesheets by category
+      timesheetData.forEach(entry => {
+        const cost = parseFloat(entry.hours) * parseFloat(entry.payRate);
+        if (entry.categoryId) {
+          categoryTotals.set(entry.categoryId, (categoryTotals.get(entry.categoryId) || 0) + cost);
+        } else {
+          uncategorizedTotal += cost;
+        }
+      });
+
+      // Track equipment by category
+      equipmentData.forEach(entry => {
+        const cost = parseFloat(entry.fuelCost) + parseFloat(entry.rentalCost);
+        if (entry.categoryId) {
+          categoryTotals.set(entry.categoryId, (categoryTotals.get(entry.categoryId) || 0) + cost);
+        } else {
+          uncategorizedTotal += cost;
+        }
+      });
+
+      // Track subcontractors by category
+      subcontractorData.forEach(entry => {
+        const cost = parseFloat(entry.cost);
+        if (entry.categoryId) {
+          categoryTotals.set(entry.categoryId, (categoryTotals.get(entry.categoryId) || 0) + cost);
+        } else {
+          uncategorizedTotal += cost;
+        }
+      });
+
+      // Track overhead by category
+      overheadData.forEach(entry => {
+        const cost = parseFloat(entry.cost);
+        if (entry.categoryId) {
+          categoryTotals.set(entry.categoryId, (categoryTotals.get(entry.categoryId) || 0) + cost);
+        } else {
+          uncategorizedTotal += cost;
+        }
+      });
+
+      // Track materials by category
+      allMaterials.forEach(material => {
+        const cost = parseFloat(material.cost);
+        if (material.categoryId) {
+          categoryTotals.set(material.categoryId, (categoryTotals.get(material.categoryId) || 0) + cost);
+        } else {
+          uncategorizedTotal += cost;
+        }
+      });
+
+      // Build the category breakdown array
+      categories.forEach(category => {
+        const total = categoryTotals.get(category.id) || 0;
+        if (total > 0 || categories.length < 10) { // Always include if there are few categories
+          categoryBreakdown.push({
+            categoryId: category.id,
+            categoryName: category.name,
+            categoryColor: category.color,
+            total,
+          });
+        }
+      });
+
+      // Sort by total descending
+      categoryBreakdown.sort((a, b) => b.total - a.total);
+
       res.json({
         totalBudget,
         totalSpent,
@@ -196,6 +270,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         variance,
         dailyBurnRate,
         daysRemaining,
+        categoryBreakdown,
+        uncategorizedTotal,
       });
     } catch (error) {
       console.error('Stats error:', error);

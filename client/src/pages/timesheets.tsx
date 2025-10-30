@@ -79,6 +79,7 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
         ...data,
         hours: parseNumericInput(data.hours),
         payRate: parseNumericInput(data.payRate),
+        categoryId: data.categoryId === "none" ? undefined : data.categoryId,
       });
       return response.json();
     },

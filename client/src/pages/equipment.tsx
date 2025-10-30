@@ -81,6 +81,7 @@ export default function Equipment({ projectId }: EquipmentProps) {
         hours: parseNumericInput(data.hours),
         fuelCost: parseNumericInput(data.fuelCost),
         rentalCost: parseNumericInput(data.rentalCost),
+        categoryId: data.categoryId === "none" ? undefined : data.categoryId,
       });
       const log = await response.json();
       

@@ -83,7 +83,12 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
       const reportResponse = await apiRequest("POST", "/api/progress-reports", {
         ...data,
         percentComplete: parseInt(data.percentComplete),
-        materials: materials.filter(m => m.itemName && m.quantity && m.unit && m.cost),
+        materials: materials
+          .filter(m => m.itemName && m.quantity && m.unit && m.cost)
+          .map(m => ({
+            ...m,
+            categoryId: m.categoryId === "none" ? undefined : m.categoryId,
+          })),
       });
       const report = await reportResponse.json();
       

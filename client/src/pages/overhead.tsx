@@ -68,6 +68,7 @@ export default function Overhead({ projectId }: OverheadProps) {
       const response = await apiRequest("POST", "/api/overhead", {
         ...data,
         cost: parseNumericInput(data.cost),
+        categoryId: data.categoryId === "none" ? undefined : data.categoryId,
       });
       const entry = await response.json();
       

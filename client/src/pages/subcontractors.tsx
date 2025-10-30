@@ -70,6 +70,7 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
       const response = await apiRequest("POST", "/api/subcontractors", {
         ...data,
         cost: parseNumericInput(data.cost),
+        categoryId: data.categoryId === "none" ? undefined : data.categoryId,
       });
       const entry = await response.json();
       

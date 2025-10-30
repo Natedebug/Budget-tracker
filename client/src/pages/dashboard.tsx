@@ -7,6 +7,13 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 
+interface CategoryBreakdownItem {
+  categoryId: string;
+  categoryName: string;
+  categoryColor: string | null;
+  total: number;
+}
+
 interface BudgetStats {
   totalBudget: number;
   totalSpent: number;
@@ -23,6 +30,8 @@ interface BudgetStats {
   variance: number;
   dailyBurnRate: number;
   daysRemaining: number;
+  categoryBreakdown?: CategoryBreakdownItem[];
+  uncategorizedTotal?: number;
 }
 
 interface DashboardProps {
@@ -226,10 +235,10 @@ export default function Dashboard({ projectId }: DashboardProps) {
         </Card>
       </div>
 
-      {/* Category Breakdown */}
-      <Card data-testid="card-category-breakdown">
+      {/* Cost Type Breakdown */}
+      <Card data-testid="card-cost-type-breakdown">
         <CardHeader>
-          <CardTitle className="text-lg font-medium">Cost Breakdown by Category</CardTitle>
+          <CardTitle className="text-lg font-medium">Cost Breakdown by Type</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
@@ -266,11 +275,42 @@ export default function Dashboard({ projectId }: DashboardProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* User-Defined Category Breakdown */}
+      {((stats.categoryBreakdown?.length || 0) > 0 || (stats.uncategorizedTotal || 0) > 0) && (
+        <Card data-testid="card-user-category-breakdown">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium">Cost Breakdown by Budget Category</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              {stats.categoryBreakdown?.map((category) => (
+                <CategoryItem
+                  key={category.categoryId}
+                  label={category.categoryName}
+                  spent={category.total}
+                  color={category.categoryColor || "bg-muted"}
+                  customColor={category.categoryColor}
+                  testId={`user-category-${category.categoryId}`}
+                />
+              ))}
+              {stats.uncategorizedTotal > 0 && (
+                <CategoryItem
+                  label="Uncategorized"
+                  spent={stats.uncategorizedTotal}
+                  color="bg-muted"
+                  testId="user-category-uncategorized"
+                />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
-function CategoryItem({ label, spent, color, testId }: { label: string; spent: number; color: string; testId: string }) {
+function CategoryItem({ label, spent, color, customColor, testId }: { label: string; spent: number; color: string; customColor?: string | null; testId: string }) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -283,7 +323,11 @@ function CategoryItem({ label, spent, color, testId }: { label: string; spent: n
   return (
     <div className="flex items-center justify-between" data-testid={testId}>
       <div className="flex items-center gap-3 flex-1">
-        <div className={`w-3 h-3 rounded-sm ${color}`} />
+        {customColor ? (
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: customColor }} />
+        ) : (
+          <div className={`w-3 h-3 rounded-sm ${color}`} />
+        )}
         <span className="text-sm font-medium">{label}</span>
       </div>
       <span className="text-sm font-mono font-semibold" data-testid={`${testId}-amount`}>
