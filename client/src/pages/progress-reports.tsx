@@ -99,14 +99,14 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
       
       const previousReports = queryClient.getQueryData<ProgressReport[]>(["/api/projects", projectId, "progress-reports"]);
       
-      const optimisticReport: Partial<ProgressReport> & { id: string; projectId: string } = {
+      const optimisticReport = {
         id: `temp-${Date.now()}`,
         projectId: newReport.projectId,
         percentComplete: parseInt(newReport.percentComplete),
-        date: newReport.date as any,
+        date: newReport.date,
         notes: newReport.notes || null,
         photoUrls: null,
-        createdAt: new Date().toISOString() as any,
+        createdAt: new Date().toISOString(),
       };
       
       queryClient.setQueryData<ProgressReport[]>(

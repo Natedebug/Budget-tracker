@@ -96,16 +96,16 @@ export default function Equipment({ projectId }: EquipmentProps) {
       
       const previousLogs = queryClient.getQueryData<EquipmentLog[]>(["/api/projects", projectId, "equipment"]);
       
-      const optimisticLog: Partial<EquipmentLog> & { id: string; projectId: string } = {
+      const optimisticLog = {
         id: `temp-${Date.now()}`,
         projectId: newLog.projectId,
         equipmentName: newLog.equipmentName,
         hours: newLog.hours,
         fuelCost: newLog.fuelCost,
         rentalCost: newLog.rentalCost,
-        date: newLog.date as any,
+        date: newLog.date,
         notes: newLog.notes || null,
-        createdAt: new Date().toISOString() as any,
+        createdAt: new Date().toISOString(),
       };
       
       queryClient.setQueryData<EquipmentLog[]>(

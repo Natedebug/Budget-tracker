@@ -55,7 +55,7 @@ export const queryClient = new QueryClient({
         if (error instanceof Error && error.message.includes('400')) {
           return false;
         }
-        return failureCount < 2;
+        return failureCount < 3;
       },
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
@@ -67,9 +67,9 @@ export const queryClient = new QueryClient({
         if (error instanceof Error && error.message.includes('400')) {
           return false;
         }
-        return failureCount < 1;
+        return failureCount < 3;
       },
-      retryDelay: 1000,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
   },
 });

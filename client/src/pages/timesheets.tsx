@@ -81,15 +81,15 @@ export default function Timesheets({ projectId }: TimesheetsProps) {
       
       const previousTimesheets = queryClient.getQueryData<Timesheet[]>(["/api/projects", projectId, "timesheets"]);
       
-      const optimisticTimesheet: Partial<Timesheet> & { id: string; projectId: string } = {
+      const optimisticTimesheet = {
         id: `temp-${Date.now()}`,
         projectId: newTimesheet.projectId,
         employeeName: newTimesheet.employeeName,
         hours: newTimesheet.hours,
         payRate: newTimesheet.payRate,
-        date: newTimesheet.date as any,
+        date: newTimesheet.date,
         notes: newTimesheet.notes || null,
-        createdAt: new Date().toISOString() as any,
+        createdAt: new Date().toISOString(),
       };
       
       queryClient.setQueryData<Timesheet[]>(
