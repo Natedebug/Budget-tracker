@@ -85,19 +85,19 @@ export default function Subcontractors({ projectId }: SubcontractorsProps) {
       
       const previousEntries = queryClient.getQueryData<SubcontractorEntry[]>(["/api/projects", projectId, "subcontractors"]);
       
-      const optimisticEntry: SubcontractorEntry = {
+      const optimisticEntry: Partial<SubcontractorEntry> & { id: string; projectId: string } = {
         id: `temp-${Date.now()}`,
         projectId: newEntry.projectId,
         contractorName: newEntry.contractorName,
         cost: newEntry.cost,
-        date: new Date(newEntry.date),
+        date: newEntry.date as any,
         description: newEntry.description || null,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString() as any,
       };
       
       queryClient.setQueryData<SubcontractorEntry[]>(
         ["/api/projects", projectId, "subcontractors"],
-        (old) => [optimisticEntry, ...(old || [])]
+        (old) => [optimisticEntry as SubcontractorEntry, ...(old || [])]
       );
       
       return { previousEntries };

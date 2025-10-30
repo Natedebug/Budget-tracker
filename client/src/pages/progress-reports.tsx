@@ -94,6 +94,38 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
       
       return report;
     },
+    onMutate: async (newReport) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/projects", projectId, "progress-reports"] });
+      
+      const previousReports = queryClient.getQueryData<ProgressReport[]>(["/api/projects", projectId, "progress-reports"]);
+      
+      const optimisticReport: Partial<ProgressReport> & { id: string; projectId: string } = {
+        id: `temp-${Date.now()}`,
+        projectId: newReport.projectId,
+        percentComplete: parseInt(newReport.percentComplete),
+        date: newReport.date as any,
+        notes: newReport.notes || null,
+        photoUrls: null,
+        createdAt: new Date().toISOString() as any,
+      };
+      
+      queryClient.setQueryData<ProgressReport[]>(
+        ["/api/projects", projectId, "progress-reports"],
+        (old) => [optimisticReport as ProgressReport, ...(old || [])]
+      );
+      
+      return { previousReports };
+    },
+    onError: (err, newReport, context) => {
+      if (context?.previousReports) {
+        queryClient.setQueryData(["/api/projects", projectId, "progress-reports"], context.previousReports);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to save progress report. Please try again.",
+        variant: "destructive",
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "progress-reports"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "stats"] });
@@ -110,13 +142,6 @@ export default function ProgressReports({ projectId }: ProgressReportsProps) {
       setMaterials([]);
       setUploadedReceiptId(null);
       setShowForm(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to save progress report. Please try again.",
-        variant: "destructive",
-      });
     },
   });
 

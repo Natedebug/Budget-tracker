@@ -96,21 +96,21 @@ export default function Equipment({ projectId }: EquipmentProps) {
       
       const previousLogs = queryClient.getQueryData<EquipmentLog[]>(["/api/projects", projectId, "equipment"]);
       
-      const optimisticLog: EquipmentLog = {
+      const optimisticLog: Partial<EquipmentLog> & { id: string; projectId: string } = {
         id: `temp-${Date.now()}`,
         projectId: newLog.projectId,
         equipmentName: newLog.equipmentName,
         hours: newLog.hours,
         fuelCost: newLog.fuelCost,
         rentalCost: newLog.rentalCost,
-        date: new Date(newLog.date),
+        date: newLog.date as any,
         notes: newLog.notes || null,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString() as any,
       };
       
       queryClient.setQueryData<EquipmentLog[]>(
         ["/api/projects", projectId, "equipment"],
-        (old) => [optimisticLog, ...(old || [])]
+        (old) => [optimisticLog as EquipmentLog, ...(old || [])]
       );
       
       return { previousLogs };
@@ -336,7 +336,8 @@ export default function Equipment({ projectId }: EquipmentProps) {
                         <Textarea 
                           placeholder="Additional details about equipment usage..."
                           className="min-h-20"
-                          {...field} 
+                          {...field}
+                          value={field.value || ""}
                           data-testid="input-notes"
                         />
                       </FormControl>
