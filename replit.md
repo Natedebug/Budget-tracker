@@ -33,13 +33,14 @@ The application uses Shadcn/ui components built on Radix UI with Tailwind CSS, f
 - **Atomic Operations**: Implemented database transactions for atomic progress report creation with inline materials.
 - **Employee Management**: CRUD operations for employee tracking with pay rates.
 - **Gmail Integration**: Single company inbox architecture for receipt processing, using PostgreSQL advisory locks for connection serialization.
+- **Budget Categories**: User-defined categories for organizing costs within projects. Categories are optional and project-scoped, with hex color coding for visual differentiation in the dashboard breakdown.
 
 **Monorepo Structure**: Frontend (`client/`), backend (`server/`), and shared code (`shared/`) ensure type consistency using TypeScript and shared Zod schemas.
 
 ### System Design Choices
 
 **Data Storage**: PostgreSQL (Neon serverless platform) with Drizzle ORM for type-safe queries and schema management.
-- **Schema**: Includes `Projects`, `Timesheets`, `Progress Reports`, `Materials`, `Equipment Logs`, `Subcontractor Entries`, `Overhead Entries`, `Receipts`, `Receipt Links`, `Employees`, `Users`, `Sessions`, and `Gmail Connection` tables. All use UUID primary keys and timestamps.
+- **Schema**: Includes `Projects`, `Timesheets`, `Progress Reports`, `Materials`, `Equipment Logs`, `Subcontractor Entries`, `Overhead Entries`, `Receipts`, `Receipt Links`, `Employees`, `Categories`, `Users`, `Sessions`, and `Gmail Connection` tables. All use UUID primary keys and timestamps. Cost entries (timesheets, equipment, subcontractors, overhead, materials) have optional foreign key references to Categories for budget organization.
 - **Connection Pooling**: Neon serverless connection pooling with WebSocket support.
 
 **Build Strategy**: Vite for client (to `dist/public`), esbuild for server (to `dist/`).
